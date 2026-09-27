@@ -1,107 +1,123 @@
 # 11. Déploiement Vercel
 
-> Cette étape doit être faite depuis ton compte Vercel : je n'ai pas d'accès réseau sortant vers
-> vercel.com depuis cet environnement (voir limitation expliquée dans la conversation), donc je ne
-> peux pas cliquer à ta place. Voici la marche à suivre exacte, ça prend 5-10 minutes.
+> Je n'ai pas d'accès réseau sortant vers vercel.com depuis cet environnement (sandbox restreint
+> aux registres npm/GitHub), donc je ne peux pas cliquer à ta place. Voici la marche à suivre
+> exacte, avec toutes tes vraies valeurs déjà prêtes à copier-coller — ça prend 5-10 minutes.
 
 ## 11.1 Pré-requis (déjà faits ✅)
 
-- [x] Le code est poussé sur GitHub, branche `arena/01a0e32c-pronosbot` du repo `Falaire/PRONOSBOT`
-- [x] `npm run build` passe sans erreur
-- [x] `vercel.json` déclare les 3 tâches planifiées (compatibles avec le plan Hobby gratuit — voir
-      section 11.5)
-- [x] `.env.example` liste toutes les variables nécessaires
+- [x] Code poussé sur GitHub, branche `arena/01a0e32c-pronosbot` du repo `Falaire/PRONOSBOT`
+- [x] `npm run build` passe sans erreur, `npm test` : 14/14 tests OK
+- [x] `vercel.json` déclare les 3 tâches planifiées (compatibles plan Hobby gratuit, voir 11.5)
+- [x] `package.json` précise `engines.node >= 18.18.0` (requis par Next.js 15)
+- [x] Paiement en mode manuel configuré (numéro T-Money réel, Flooz en attente)
 
 ## 11.2 Étape par étape — premier déploiement
 
-1. Va sur [vercel.com](https://vercel.com) et connecte-toi (ou crée un compte) **avec ton compte
-   GitHub** (le même que celui utilisé pour `Falaire/PRONOSBOT`) — ça simplifie l'import.
-2. Clique **Add New...** → **Project**.
-3. Dans la liste des repos GitHub, sélectionne **Falaire/PRONOSBOT**.
-   - Si le repo n'apparaît pas : clique "Adjust GitHub App Permissions" et autorise Vercel à
-     accéder à ce repo.
-4. **Configure Project** :
-   - **Branch** : choisis `arena/01a0e32c-pronosbot` (Vercel déploie `main` par défaut ; change la
-     "Production Branch" dans Project Settings → Git après le premier import si tu veux que cette
-     branche soit celle qui se déploie en continu, ou fusionne d'abord vers `main` via la Pull
-     Request déjà ouverte).
-   - **Framework Preset** : Next.js (détecté automatiquement)
-   - **Build Command** / **Output Directory** : laisser les valeurs par défaut Next.js
-5. **Environment Variables** — ajoute toutes les variables de `.env.example` avec tes vraies
-   valeurs (copie directement le contenu de ton `.env.local`) :
+### Option A — Bouton "Deploy" (le plus rapide)
 
-   | Variable | Valeur |
-   |---|---|
-   | `NEXT_PUBLIC_SITE_URL` | `https://TON-PROJET.vercel.app` (à corriger après le premier déploiement avec l'URL réelle, ou ton nom de domaine) |
-   | `NEXT_PUBLIC_SUPABASE_URL` | `https://qzwyyxaatwamjwemcdhw.supabase.co` |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ta clé anon |
-   | `SUPABASE_SERVICE_ROLE_KEY` | ta clé service_role (⚠️ ne jamais cocher "expose to browser") |
-   | `API_FOOTBALL_KEY` | ta clé API-Football |
-   | `PAYMENTS_PROVIDER` | `manual` |
-   | `NEXT_PUBLIC_MANUAL_TMONEY_NUMBER` | `+228 70 65 87 96` |
-   | `NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER` | (laisser vide pour l'instant) |
-   | `NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER` | `KickPredict Togo` |
-   | `NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER` | `+22870658796` |
-   | `NEXT_PUBLIC_OTP_CHANNEL` | `sms` (ou `whatsapp` une fois configuré, voir doc 10) |
-   | `CRON_SECRET` | génère une valeur aléatoire longue (ex: `openssl rand -hex 32`) |
-   | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | quand le bot Telegram sera créé |
+Clique le bouton en haut du [README](../README.md) : il importe directement la branche
+`arena/01a0e32c-pronosbot` et te pré-remplit la liste des variables à saisir (les valeurs, elles,
+sont à coller depuis le tableau ci-dessous — Vercel ne peut pas les connaître à l'avance).
 
-   Laisse `CINETPAY_*` et `WHATSAPP_*` vides pour l'instant (mode manuel, voir doc 04).
-6. Clique **Deploy**. Le premier build prend ~1-2 minutes.
-7. Une fois déployé, Vercel te donne une URL du type `https://pronosbot-xxxx.vercel.app`.
-   **Retourne dans Project Settings → Environment Variables**, mets à jour
-   `NEXT_PUBLIC_SITE_URL` avec cette vraie URL, puis clique **Redeploy** (Deployments → menu "..."
-   sur le dernier déploiement → Redeploy) pour que la variable soit prise en compte partout
-   (liens WhatsApp, retour de paiement, etc.).
+### Option B — Import manuel
 
-## 11.3 Vérifications post-déploiement
+1. Va sur [vercel.com](https://vercel.com) et connecte-toi **avec ton compte GitHub** (celui
+   utilisé pour `Falaire/PRONOSBOT`).
+2. **Add New...** → **Project** → sélectionne **Falaire/PRONOSBOT**.
+   - Si le repo n'apparaît pas : "Adjust GitHub App Permissions" → autorise l'accès à ce repo.
+3. Dans l'écran de configuration, ouvre **Git** et choisis la branche **`arena/01a0e32c-pronosbot`**
+   (par défaut Vercel propose `main` — change bien la branche importée ici).
+4. **Framework Preset** : Next.js (détecté automatiquement, ne rien changer).
 
-- [ ] La landing page (`/`) s'affiche correctement sur mobile
-- [ ] `/inscription` déclenche bien l'envoi d'un OTP (une fois Twilio configuré, voir doc 10)
-- [ ] `/dashboard/abonnement` affiche le panneau de paiement manuel avec le bon numéro T-Money
-- [ ] `/admin` redirige vers `/dashboard` pour un compte non-admin (sécurité)
-- [ ] `curl https://TON-DOMAINE/api/health` renvoie `{"status":"ok",...}`
+## 11.3 Variables d'environnement — prêtes à copier
 
-## 11.4 Passer ton compte en administrateur
+Dans l'écran d'import (ou après coup dans **Project Settings → Environment Variables**), ajoute
+exactement ces valeurs (celles que tu m'as données) :
 
-Une fois inscrit sur le site déployé (via `/inscription`), va dans **Supabase Dashboard** → ton
-projet → **SQL Editor**, et exécute (remplace par ton vrai user id, visible dans
-**Authentication** → **Users**) :
-
-```sql
-update profiles set role = 'admin' where id = 'TON_USER_ID';
+```
+NEXT_PUBLIC_SITE_URL=https://TON-PROJET.vercel.app
+NEXT_PUBLIC_SUPABASE_URL=https://qzwyyxaatwamjwemcdhw.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d3l5eGFhdHdhbWp3ZW1jZGh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMzIyNTksImV4cCI6MjEwNTkwODI1OX0.bjacFwag4llUAaR8vjW3EK7K501xUYWh34wim2lXrEo
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6d3l5eGFhdHdhbWp3ZW1jZGh3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDMzMjI1OSwiZXhwIjoyMTA1OTA4MjU5fQ.m_xBtmIQXjjay4rQKGYRjTlJR2MTKccIOKGqGkTJWqY
+API_FOOTBALL_KEY=23a02d93669240054361ac9a0f7ca98f
+PAYMENTS_PROVIDER=manual
+NEXT_PUBLIC_MANUAL_TMONEY_NUMBER=+228 70 65 87 96
+NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER=
+NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER=KickPredict Togo
+NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER=+22870658796
+NEXT_PUBLIC_OTP_CHANNEL=sms
+CRON_SECRET=c5be5a2a0a975779ca5779ba1acd0bca112d46025afe35b4ef8c989cb2b0e909
 ```
 
-Tu peux alors accéder à `/admin` pour valider les paiements manuels et déclencher le pipeline de
-données.
+⚠️ **`SUPABASE_SERVICE_ROLE_KEY`** : dans le formulaire Vercel, laisse la case **"Sensitive"**
+cochée si elle est proposée (elle masque la valeur dans l'UI après sauvegarde) et ne la mets
+**jamais** dans une variable préfixée `NEXT_PUBLIC_`.
 
-## 11.5 Tâches planifiées (crons) sur le plan Hobby (gratuit)
+Variables à ajouter **plus tard** (laisser vides pour l'instant, tout fonctionne sans elles en
+mode manuel/démo) :
 
-Le plan **Hobby** de Vercel autorise jusqu'à 100 crons par projet, mais **chacun doit s'exécuter
-au maximum une fois par jour** (une expression plus fréquente est rejetée au déploiement). Nos 3
-crons (`06h00`, `06h30`, `08h00`, un par jour chacun) respectent cette limite. Deux nuances à
-connaître :
+```
+CINETPAY_API_KEY=
+CINETPAY_SITE_ID=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_ACCESS_TOKEN=
+OPENAI_API_KEY=
+```
 
-- **Fuseau horaire** : les crons Vercel s'exécutent en UTC. Le Togo étant en UTC+0 toute l'année
-  (pas de changement d'heure), `06h00 UTC` = `06h00` heure de Lomé — aucune conversion nécessaire.
-- **Précision horaire** : sur Hobby, l'heure exacte d'exécution n'est garantie qu'à l'heure près
-  (un cron à `06h00` peut réellement partir jusqu'à `06h59`). Sans impact réel pour des
-  pronostics du matin, à garder en tête si tu ajoutes plus tard un cron sensible au timing (ex:
-  alertes juste avant le coup d'envoi).
-- Si un jour tu as besoin d'exécutions plus fréquentes (ex: rafraîchir les cotes live toutes les
-  5 minutes pendant les matchs), il faudra soit passer au plan **Pro** (crons jusqu'à 1×/minute),
-  soit utiliser un service de cron externe (cron-job.org, EasyCron, GitHub Actions scheduled
-  workflow) qui appelle tes routes API avec l'en-tête `Authorization: Bearer $CRON_SECRET`.
+## 11.4 Déployer, puis corriger l'URL
 
-## 11.6 Nom de domaine personnalisé (optionnel)
+1. Clique **Deploy**. Premier build : ~1-2 minutes.
+2. Vercel te donne une URL du type `https://kickpredict-togo-xxxx.vercel.app`.
+3. Retourne dans **Project Settings → Environment Variables**, remplace la valeur de
+   `NEXT_PUBLIC_SITE_URL` par cette URL réelle.
+4. **Deployments** → menu "..." sur le dernier déploiement → **Redeploy** (nécessaire pour que la
+   nouvelle valeur de `NEXT_PUBLIC_SITE_URL` soit prise en compte partout : lien WhatsApp, retour
+   de paiement CinetPay futur, etc.).
 
-Dans **Project Settings** → **Domains**, ajoute ton propre domaine (ex: `kickpredict.tg` si
-disponible, ou `.com`/`.africa`) et suis les instructions DNS de Vercel (enregistrement A ou
-CNAME chez ton registrar). Pense à remettre à jour `NEXT_PUBLIC_SITE_URL` avec le nouveau domaine.
+## 11.5 Vérifications post-déploiement
 
-## 11.7 Ce qui ne fonctionnera pas tant que Supabase n'est pas migré (voir réponse précédente)
+Une fois déployé, teste dans l'ordre :
 
-Tant que `supabase/migrations/0001_init.sql` n'a pas été exécuté dans le SQL Editor de ton projet
-Supabase, les pages qui dépendent de la base de données réelle (dashboard avec vraies données,
-inscription, abonnement) fonctionneront en **mode démo** (données fictives) sans erreur bloquante,
-mais aucune vraie donnée ne sera persistée. Fais cette étape avant d'inviter de vrais utilisateurs.
+- [ ] `https://TON-URL.vercel.app/` → landing page s'affiche
+- [ ] `https://TON-URL.vercel.app/api/health` → répond `{"status":"ok",...}`
+- [ ] `https://TON-URL.vercel.app/dashboard/abonnement` → affiche le panneau de paiement manuel
+      avec le numéro **+228 70 65 87 96** et Flooz grisé "(bientôt)"
+- [ ] `https://TON-URL.vercel.app/admin` → redirige vers `/dashboard` (normal, pas encore admin)
+- [ ] `https://TON-URL.vercel.app/inscription` → le formulaire OTP s'affiche (l'envoi réel du SMS
+      ne fonctionnera qu'une fois Twilio configuré dans Supabase, voir doc 10)
+
+## 11.6 Étapes suivantes une fois déployé
+
+1. **Exécuter la migration Supabase** (`supabase/migrations/0001_init.sql` dans le SQL Editor) —
+   sans ça, inscription/abonnement restent en mode démo (aucune donnée persistée).
+2. **Configurer Twilio** (doc 10) pour que l'OTP par SMS/WhatsApp fonctionne réellement.
+3. **T'inscrire une première fois** sur le site déployé, puis te passer admin en SQL :
+   ```sql
+   update profiles set role = 'admin' where id = 'TON_USER_ID';
+   ```
+   (Ton `TON_USER_ID` est visible dans Supabase → **Authentication** → **Users**.)
+4. Aller sur `/admin` pour valider les futurs paiements manuels et déclencher le pipeline de
+   données (sync matchs / génération pronostics) sans attendre le cron du lendemain matin.
+
+## 11.7 Tâches planifiées (crons) sur le plan Hobby (gratuit)
+
+Le plan **Hobby** autorise jusqu'à 100 crons par projet, mais **chacun doit s'exécuter au maximum
+une fois par jour**. Nos 3 crons (`06h00`, `06h30`, `08h00`, chacun une fois/jour) respectent
+cette limite sans upgrade payant. Deux nuances :
+
+- **Fuseau horaire** : les crons Vercel tournent en UTC. Le Togo est en UTC+0 toute l'année (pas
+  de changement d'heure) → `06h00 UTC` = `06h00` heure de Lomé, aucune conversion nécessaire.
+- **Précision horaire** : sur Hobby, l'heure n'est garantie qu'à l'heure près (un cron à `06h00`
+  peut réellement partir jusqu'à `06h59`) — sans impact pour des pronostics du matin.
+- Besoin d'exécutions plus fréquentes plus tard (ex: cotes live toutes les 5 min pendant un
+  match) → soit passer au plan **Pro** (crons 1×/minute), soit un cron externe
+  (cron-job.org, GitHub Actions) qui appelle la route avec `Authorization: Bearer $CRON_SECRET`.
+
+## 11.8 Nom de domaine personnalisé (optionnel)
+
+**Project Settings → Domains** → ajoute ton domaine (ex: `kickpredict.tg` si disponible) → suis
+les instructions DNS (enregistrement A ou CNAME chez ton registrar) → remets à jour
+`NEXT_PUBLIC_SITE_URL` avec le nouveau domaine et redéploie.

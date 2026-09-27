@@ -10,6 +10,10 @@ sans carte bancaire.
 La documentation produit complète (architecture, schéma BDD, wireframes, flow de paiement,
 prompt IA, monétisation, roadmap MVP, APIs externes, cadre juridique) est dans **[`docs/`](docs/)**.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FFalaire%2FPRONOSBOT%2Ftree%2Farena%2F01a0e32c-pronosbot&project-name=kickpredict-togo&repository-name=kickpredict-togo&env=NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,API_FOOTBALL_KEY,PAYMENTS_PROVIDER,NEXT_PUBLIC_MANUAL_TMONEY_NUMBER,NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER,NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER,NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER,NEXT_PUBLIC_OTP_CHANNEL,CRON_SECRET&envDescription=Voir%20la%20liste%20complete%20et%20les%20valeurs%20dans%20docs%2F11-deploiement-vercel.md)
+
+Guide détaillé pas à pas (avec toutes les valeurs prêtes à copier) : [docs/11-deploiement-vercel.md](docs/11-deploiement-vercel.md).
+
 ## Démarrage rapide
 
 ```bash

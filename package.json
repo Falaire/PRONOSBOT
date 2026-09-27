@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "KickPredict Togo — SaaS de pronostics football IA (Elo + Poisson) pour le Togo et l'UEMOA, paiement Mobile Money (T-Money / Flooz)",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
