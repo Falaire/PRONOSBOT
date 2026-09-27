@@ -1,6 +1,44 @@
 # 4. Flow d'abonnement + paiement Mobile Money
 
-## 4.1 Vue d'ensemble du flow
+## 4.0 État actuel : mode MANUEL (transitoire)
+
+Le compte marchand CinetPay n'étant pas encore activé, le produit démarre avec
+`PAYMENTS_PROVIDER=manual` (voir `lib/payments/config.ts`). Flow réel utilisé aujourd'hui :
+
+```
+Client                         Front (/dashboard/abonnement)      Admin (/admin)
+  │ 1. Choisit un plan                 │                               │
+  │ 2. Envoie l'argent lui-même        │                               │
+  │    (T-Money/Flooz) vers le          │                               │
+  │    numéro marchand affiché          │                               │
+  │ 3. Remplit le formulaire            │                               │
+  │    "Déclarer mon paiement"          │                               │
+  │────────────────────────────────────►│ POST /api/payments/manual/submit
+  │                                     │  -> payments(status='pending', provider='manual')
+  │ 4. (optionnel) envoie une capture   │                               │
+  │    WhatsApp pour accélérer          │                               │
+  │                                     │                               │ 5. Vérifie le SMS de
+  │                                     │                               │    réception réelle sur
+  │                                     │                               │    le numéro marchand
+  │                                     │                               │ 6. Clique "Valider"
+  │                                     │                               │────────────────────►
+  │                                     │            POST /api/payments/manual/approve
+  │                                     │            -> crée subscriptions(status='active')
+  │                                     │            -> payments(status='success')
+  │ 7. Abonnement actif                 │◄──────────────────────────────│
+```
+
+Avantages de démarrer ainsi : **zéro dépendance externe pour facturer un premier client dès
+aujourd'hui** — seul un numéro Mobile Money marchand (compte T-Money/Flooz personnel ou
+professionnel) est nécessaire. Limite assumée : validation non instantanée (délai humain, quelques
+minutes à quelques heures), volume difficilement scalable au-delà de quelques dizaines de
+paiements/jour sans automatisation — d'où le passage prévu à CinetPay dès que possible
+(section 4.7).
+
+Le code CinetPay ci-dessous reste entièrement implémenté et prêt : il suffit de positionner
+`PAYMENTS_PROVIDER=cinetpay` + les clés d'API pour basculer, sans changement de code.
+
+## 4.1 Vue d'ensemble du flow (mode CinetPay, cible)
 
 ```
 Utilisateur                Front (Next.js)          API interne              CinetPay              Base de données
@@ -97,3 +135,15 @@ signature du contrat marchand ; ils évoluent régulièrement.
 3. Vérifier les plafonds Mobile Money par transaction chez Togocom (T-Money) et Moov Africa
    (Flooz) — certains comptes particuliers ont des limites journalières qui peuvent bloquer un
    abonnement annuel payé en une fois (25 000 FCFA reste généralement sous les plafonds standards).
+
+## 4.7 Migration du mode manuel vers CinetPay
+
+1. Créer et valider le compte marchand CinetPay (section 4.6).
+2. Renseigner `CINETPAY_API_KEY` et `CINETPAY_SITE_ID` dans les variables d'environnement
+   (Vercel + `.env.local`).
+3. Positionner `PAYMENTS_PROVIDER=cinetpay`.
+4. Redéployer : `/dashboard/abonnement` bascule automatiquement sur `PaymentPanel`
+   (paiement CinetPay) au lieu de `ManualPaymentPanel` — aucune autre modification de code requise.
+5. Garder le mode manuel disponible en secours (on peut repasser `PAYMENTS_PROVIDER=manual` à tout
+   moment, par exemple en cas d'incident CinetPay) : les deux flux écrivent dans la même table
+   `payments`, avec `provider` = `'manual'` ou `'cinetpay'` pour les distinguer.

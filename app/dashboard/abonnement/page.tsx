@@ -2,6 +2,8 @@ import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
 import { PricingCard } from "@/components/PricingCard";
 import { PaymentPanel } from "./payment-panel";
+import { ManualPaymentPanel } from "./manual-payment-panel";
+import { getPaymentsProvider, MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
 
 const PLANS = [
   { code: "hebdo", name: "Hebdo", priceFcfa: 1000, durationDays: 7, features: ["Accès illimité 7 jours", "Alertes Telegram", "Idéal pour tester"] },
@@ -16,6 +18,8 @@ export default async function AbonnementPage({
   searchParams: Promise<{ plan?: string; status?: string }>;
 }) {
   const params = await searchParams;
+  const provider = getPaymentsProvider();
+
   return (
     <>
       <Navbar />
@@ -23,7 +27,7 @@ export default async function AbonnementPage({
         <div className="mx-auto max-w-5xl px-4 py-8">
           <h1 className="text-2xl font-bold text-white mb-1">Choisissez votre abonnement</h1>
           <p className="text-sm text-white/60 mb-6">
-            Paiement sécurisé par Mobile Money — T-Money (Mixx by Yas) ou Flooz (Moov Africa). Aucune carte bancaire requise.
+            Paiement 100% Mobile Money — T-Money (Mixx by Yas) ou Flooz (Moov Africa). Aucune carte bancaire requise.
           </p>
 
           {params.status === "retour" && (
@@ -39,7 +43,11 @@ export default async function AbonnementPage({
             ))}
           </div>
 
-          <PaymentPanel plans={PLANS} defaultPlan={params.plan ?? "mensuel"} />
+          {provider === "manual" ? (
+            <ManualPaymentPanel plans={PLANS} defaultPlan={params.plan ?? "mensuel"} manualInfo={MANUAL_PAYMENT_INFO} />
+          ) : (
+            <PaymentPanel plans={PLANS} defaultPlan={params.plan ?? "mensuel"} />
+          )}
         </div>
       </main>
       <BottomNav />

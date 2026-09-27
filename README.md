@@ -40,6 +40,23 @@ fictives dans `lib/demo-data.ts`) pour visualiser tout le produit immédiatement
 7. `CINETPAY_API_KEY` / `CINETPAY_SITE_ID` : crée un compte marchand sur
    [cinetpay.com](https://cinetpay.com) pour activer T-Money et Flooz au Togo.
 
+## Paiement : mode manuel par défaut
+
+Le temps d'activer un compte marchand CinetPay, `PAYMENTS_PROVIDER=manual` (valeur par défaut)
+active un **flux de paiement manuel** :
+
+1. Le client choisit un plan sur `/dashboard/abonnement` et envoie lui-même le montant via
+   T-Money/Flooz vers le numéro marchand affiché (`NEXT_PUBLIC_MANUAL_TMONEY_NUMBER` /
+   `NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER`).
+2. Il déclare son paiement dans le formulaire (numéro payeur, référence de transaction optionnelle).
+3. L'admin vérifie la réception réelle (SMS reçu sur le numéro marchand) puis clique "Valider"
+   dans `/admin` — l'abonnement s'active immédiatement (route `/api/payments/manual/approve`).
+
+Pour repasser en paiement automatique dès que le compte CinetPay est prêt : mets
+`PAYMENTS_PROVIDER=cinetpay` et renseigne `CINETPAY_API_KEY` / `CINETPAY_SITE_ID` — le code
+CinetPay (`lib/payments/cinetpay.ts`, webhook avec vérification serveur-à-serveur) est déjà en
+place et ne nécessite aucun changement de code, juste la bascule de variable d'environnement.
+
 ## Modèle de prédiction (Elo + Poisson)
 
 Spécification complète, testée unitairement : [`lib/prediction/engine.ts`](lib/prediction/engine.ts).
