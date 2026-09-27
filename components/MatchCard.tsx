@@ -8,15 +8,15 @@ import type { DemoFixture } from "@/lib/demo-data";
 
 export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: boolean }) {
   return (
-    <Card className="flex flex-col gap-4">
+    <Card variant="glow" className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <Badge tone="neutral">{fixture.league}</Badge>
-        <span className="text-xs text-white/50">{formatDateTimeLome(fixture.kickoff)}</span>
+        <span className="text-xs text-white/45">{formatDateTimeLome(fixture.kickoff)}</span>
       </div>
 
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold text-white flex-1 text-right">{fixture.home}</div>
-        <div className="text-white/40 text-xs px-2">vs</div>
+        <div className="text-white/30 text-[10px] px-2 font-semibold tracking-wider">VS</div>
         <div className="text-sm font-semibold text-white flex-1">{fixture.away}</div>
       </div>
 
@@ -26,7 +26,7 @@ export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: b
             <ConfidenceBar value={fixture.confidence} />
             <p className="text-xs text-white/60 mt-2 line-clamp-2">{fixture.explanation}</p>
           </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink-900/70 rounded-lg">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink-950/75 backdrop-blur-sm rounded-lg">
             <Lock className="w-5 h-5 text-accent-500" />
             <Link href="/dashboard/abonnement" className="text-xs font-semibold text-accent-500 underline">
               Débloquer avec Premium
@@ -47,16 +47,16 @@ export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: b
           </div>
           <p className="text-xs text-white/60">{fixture.explanation}</p>
           <div className="grid grid-cols-3 gap-2 text-center text-xs mt-1">
-            <div className="rounded-lg bg-white/5 py-2">
-              <div className="text-white/50">1</div>
+            <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] py-2">
+              <div className="text-white/40">1</div>
               <div className="font-semibold text-white">{Math.round(fixture.probHome * 100)}%</div>
             </div>
-            <div className="rounded-lg bg-white/5 py-2">
-              <div className="text-white/50">X</div>
+            <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] py-2">
+              <div className="text-white/40">X</div>
               <div className="font-semibold text-white">{Math.round(fixture.probDraw * 100)}%</div>
             </div>
-            <div className="rounded-lg bg-white/5 py-2">
-              <div className="text-white/50">2</div>
+            <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] py-2">
+              <div className="text-white/40">2</div>
               <div className="font-semibold text-white">{Math.round(fixture.probAway * 100)}%</div>
             </div>
           </div>

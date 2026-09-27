@@ -16,19 +16,19 @@ export default function HistoriquePage() {
           </p>
 
           <div className="grid sm:grid-cols-3 gap-4 mb-8">
-            <Card className="text-center">
-              <div className="text-3xl font-extrabold text-brand-500">
+            <Card className="text-center" variant="glow">
+              <div className="text-4xl font-extrabold font-display bg-gradient-to-r from-brand-400 to-accent-500 bg-clip-text text-transparent">
                 {Math.round(DEMO_ACCURACY.last30Days * 100)}%
               </div>
-              <div className="text-sm text-white/60 mt-1">Précision 1X2 (30 derniers jours)</div>
+              <div className="text-sm text-white/55 mt-1.5">Précision 1X2 (30 derniers jours)</div>
             </Card>
-            <Card className="text-center">
-              <div className="text-3xl font-extrabold text-white">{DEMO_ACCURACY.totalPredictions}</div>
-              <div className="text-sm text-white/60 mt-1">Pronostics analysés</div>
+            <Card className="text-center" variant="glow">
+              <div className="text-4xl font-extrabold font-display text-white">{DEMO_ACCURACY.totalPredictions}</div>
+              <div className="text-sm text-white/55 mt-1.5">Pronostics analysés</div>
             </Card>
-            <Card className="text-center">
-              <div className="text-3xl font-extrabold text-white">{DEMO_ACCURACY.correct1x2}</div>
-              <div className="text-sm text-white/60 mt-1">Résultats corrects</div>
+            <Card className="text-center" variant="glow">
+              <div className="text-4xl font-extrabold font-display text-white">{DEMO_ACCURACY.correct1x2}</div>
+              <div className="text-sm text-white/55 mt-1.5">Résultats corrects</div>
             </Card>
           </div>
 
