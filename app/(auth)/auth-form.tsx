@@ -5,41 +5,30 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 
 /**
- * Authentification par numéro de téléphone + code OTP (SMS), via Supabase Auth.
- * Plus adaptée au marché togolais que l'email : le numéro Mobile Money sert aussi
- * d'identifiant unique et de moyen de contact pour les alertes.
+ * Authentification par email + code OTP (6 chiffres), via Supabase Auth.
+ * Utilise le service d'envoi d'email intégré à Supabase — aucun fournisseur externe
+ * (Twilio, etc.) n'est nécessaire. Voir docs/10-sms-otp-setup.md pour augmenter le volume
+ * d'envoi si besoin (SMTP personnalisé, ex: Resend).
  */
 export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
-  function toE164(input: string): string {
-    const digits = input.replace(/\D/g, "");
-    if (digits.startsWith("228")) return `+${digits}`;
-    return `+228${digits}`; // indicatif Togo par défaut
-  }
-
-  // "sms" (Twilio SMS/Twilio Verify) ou "whatsapp" (Twilio + canal WhatsApp, moins cher et très
-  // utilisé au Togo) — voir docs/10-sms-otp-setup.md pour la configuration côté Supabase/Twilio.
-  const otpChannel = (process.env.NEXT_PUBLIC_OTP_CHANNEL === "whatsapp" ? "whatsapp" : "sms") as
-    | "sms"
-    | "whatsapp";
-
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
-      phone: toE164(phone),
-      options: { channel: otpChannel },
+      email,
+      options: { shouldCreateUser: true },
     });
     setLoading(false);
     if (error) {
@@ -54,9 +43,9 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({
-      phone: toE164(phone),
+      email,
       token: code,
-      type: "sms",
+      type: "email",
     });
     setLoading(false);
     if (error) {
@@ -74,34 +63,34 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
       <p className="text-sm text-white/60 mb-5">
         {mode === "inscription"
           ? "3 jours d'essai gratuit, sans carte bancaire."
-          : "Connectez-vous avec votre numéro de téléphone."}
+          : "Connectez-vous avec votre adresse email."}
       </p>
 
-      {step === "phone" ? (
+      {step === "email" ? (
         <form onSubmit={sendOtp} className="space-y-4">
           <div>
             <label className="text-sm text-white/70 flex items-center gap-1">
-              <Phone className="w-4 h-4" /> Numéro de téléphone
+              <Mail className="w-4 h-4" /> Adresse email
             </label>
             <input
               required
-              type="tel"
-              placeholder="90 00 00 00"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              type="email"
+              placeholder="toi@exemple.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
             />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Envoi..." : otpChannel === "whatsapp" ? "Recevoir le code par WhatsApp" : "Recevoir le code par SMS"}
+            {loading ? "Envoi..." : "Recevoir le code par email"}
           </Button>
         </form>
       ) : (
         <form onSubmit={verifyOtp} className="space-y-4">
           <div>
             <label className="text-sm text-white/70 flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4" /> Code reçu par {otpChannel === "whatsapp" ? "WhatsApp" : "SMS"}
+              <ShieldCheck className="w-4 h-4" /> Code reçu par email
             </label>
             <input
               required
@@ -112,6 +101,9 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
               className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-widest"
             />
           </div>
+          <p className="text-xs text-white/40">
+            Vérifie aussi tes spams si le message n&apos;arrive pas au bout de 2 minutes.
+          </p>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Vérification..." : "Confirmer"}

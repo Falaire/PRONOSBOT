@@ -36,11 +36,12 @@ Implémentation réelle : voir `app/*/page.tsx`.
 ## 3.2 Inscription / Connexion (`/inscription`, `/connexion`)
 
 Formulaire à 2 étapes (implémenté dans `app/(auth)/auth-form.tsx`) :
-1. **Étape téléphone** : champ numéro (préfixe +228 auto), bouton "Recevoir le code par SMS".
+1. **Étape email** : champ adresse email, bouton "Recevoir le code par email".
 2. **Étape OTP** : champ code à 6 chiffres, bouton "Confirmer" -> redirection `/dashboard`.
 
-Pas de mot de passe, pas d'email obligatoire : le numéro de téléphone est l'identifiant unique
-(cohérent avec Mobile Money et les usages locaux).
+Pas de mot de passe : l'email est l'identifiant de connexion (via le service d'email intégré à
+Supabase, gratuit, sans fournisseur SMS externe). Le numéro de téléphone reste optionnel, pour
+les alertes WhatsApp et le paiement Mobile Money.
 
 ## 3.3 Dashboard — Matchs du jour (`/dashboard`)
 

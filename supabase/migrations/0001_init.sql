@@ -42,7 +42,8 @@ exception when duplicate_object then null; end $$;
 -- ---------------------------------------------------------------------------
 create table if not exists profiles (
   id uuid primary key references auth.users (id) on delete cascade,
-  phone text unique,
+  email text,
+  phone text unique, -- optionnel : renseigné plus tard pour les alertes WhatsApp, pas utilisé pour la connexion
   full_name text,
   role user_role not null default 'user',
   telegram_chat_id text,
@@ -51,13 +52,16 @@ create table if not exists profiles (
   created_at timestamptz not null default now()
 );
 
--- Création automatique du profil à l'inscription
+-- Création automatique du profil à l'inscription. L'authentification se fait par email + code
+-- OTP (via le service d'email intégré à Supabase, pas besoin de fournisseur SMS externe).
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, phone, full_name)
-  values (new.id, new.phone, coalesce(new.raw_user_meta_data->>'full_name', ''))
-  on conflict (id) do nothing;
+  insert into public.profiles (id, email, phone, full_name)
+  values (new.id, new.email, new.phone, coalesce(new.raw_user_meta_data->>'full_name', ''))
+  on conflict (id) do update set
+    email = coalesce(excluded.email, profiles.email),
+    phone = coalesce(excluded.phone, profiles.phone);
   return new;
 end;
 $$ language plpgsql security definer;

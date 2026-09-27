@@ -1,107 +1,87 @@
-# 10. Configuration du fournisseur SMS pour l'OTP (Supabase + Twilio)
+# 10. Authentification par email + code OTP (Supabase)
 
-Supabase Auth ne délivre pas les SMS lui-même : il faut brancher un fournisseur externe. Les
-providers supportés nativement sont **Twilio, Twilio Verify, MessageBird, Vonage**, et
-**TextLocal** (communautaire). **Twilio** est retenu ici car c'est le mieux documenté, le plus
-utilisé avec Supabase, et il couvre officiellement le Togo (+228).
+L'inscription et la connexion se font par **email + code à 6 chiffres**, envoyé grâce au
+service d'email intégré à Supabase Auth. **Aucun compte externe (Twilio ou autre) n'est
+nécessaire pour démarrer** — ça fonctionne dès que le projet Supabase est créé.
 
-## 10.1 Deux façons de faire, laquelle choisir ?
+> Historique : la première version du produit utilisait un OTP par SMS (Twilio), plus adapté
+> à un marché mobile-first, mais nettement plus cher (~300 FCFA par SMS envoyé au Togo) et plus
+> long à mettre en place (compte Twilio, vérification, geo-permissions...). Le passage à l'email
+> permet de lancer le produit immédiatement, gratuitement, sans dépendance externe.
 
-| Option | Fonctionnement | Avantages | Inconvénients |
-|---|---|---|---|
-| **A. Twilio Verify** (recommandé) | Twilio génère ET vérifie lui-même le code OTP ; Supabase lui délègue tout. | Plus fiable (Twilio gère les retries, le anti-fraude, l'expiration), configuration la plus simple côté Supabase. | Nécessite de créer un "Verify Service" dans la console Twilio (2 min). |
-| **B. Twilio SMS classique** | Supabase génère le code lui-même et demande à Twilio d'envoyer juste le texte. | Contrôle total du message envoyé (`SMS_TEMPLATE`). | Nécessite un numéro Twilio (Messaging Service) capable d'envoyer vers le Togo. |
+## 10.1 Ce qu'il y a à faire côté Supabase : rien de spécial
 
-👉 **Recommandation : Twilio Verify.** C'est l'option la plus simple à opérer au quotidien pour
-une petite équipe, et c'est celle utilisée dans la plupart des tutoriels Supabase + Next.js.
+Le provider **Email** est activé par défaut sur tout nouveau projet Supabase
+(**Authentication → Providers → Email**). Le flow OTP par email (`signInWithOtp` /
+`verifyOtp` côté code, déjà implémenté dans `app/(auth)/auth-form.tsx`) fonctionne directement
+avec l'envoi d'email intégré à Supabase — pas de clé API à configurer.
 
-## 10.2 ⚠️ Point d'attention coût — important pour le modèle économique togolais
+Un point à vérifier une seule fois :
 
-Le prix d'un SMS Twilio sortant vers le Togo (+228) est d'environ **0,49 $US** (~300 FCFA) par
-message. Pour un abonnement Hebdo à 1000 FCFA, un utilisateur qui reçoit 2-3 SMS OTP avant
-d'aboutir (erreur de saisie, nouvel appareil...) peut faire perdre presque toute la marge sur cet
-abonnement.
+1. Dashboard Supabase → ton projet → **Authentication** → **Providers** → **Email**
+2. Vérifie que **"Enable Email provider"** est activé (c'est le cas par défaut)
+3. Vérifie que **"Confirm email"** correspond à ce que tu veux :
+   - Pour le flow OTP à 6 chiffres utilisé ici, aucune action supplémentaire n'est nécessaire —
+     Supabase envoie automatiquement un email contenant un code lors de l'appel à
+     `signInWithOtp({ email })`.
 
-**Bonne nouvelle : dans ce produit, l'OTP n'est demandé qu'à l'inscription (ou en cas de
-changement d'appareil / déconnexion volontaire)**, pas à chaque visite — la session Supabase
-reste active sur l'appareil (cookies rafraîchis automatiquement par `middleware.ts`). Le volume
-réel de SMS reste donc proche du nombre de **nouvelles inscriptions**, pas du nombre de visites.
+## 10.2 ⚠️ Limite de volume du service d'email gratuit intégré
 
-Deux leviers pour réduire encore la facture :
+Le service d'email **par défaut** de Supabase (partagé entre tous les projets gratuits) est
+volontairement limité en débit — pensé pour le développement et les tout premiers lancements,
+pas pour un volume important d'inscriptions quotidiennes. Concrètement :
 
-1. **Canal WhatsApp au lieu du SMS.** Supabase + Twilio supportent l'envoi de l'OTP par WhatsApp
-   (`channel: "whatsapp"`, déjà implémenté dans `app/(auth)/auth-form.tsx`, activable via
-   `NEXT_PUBLIC_OTP_CHANNEL=whatsapp`). Les messages WhatsApp Business sont généralement bien
-   moins chers qu'un SMS international sortant, et WhatsApp est déjà l'canal principal utilisé au
-   Togo — cohérent avec le reste du produit (alertes pronostics par WhatsApp).
-   - Prérequis : dans la console Twilio, activer le "WhatsApp Sender" (sandbox pour les tests,
-     puis un numéro WhatsApp Business vérifié pour la production).
-2. **Limiter les tentatives** : Supabase limite déjà une demande d'OTP par numéro à 1 par 60
-   secondes par défaut — suffisant pour éviter le spam accidentel.
+- Les emails peuvent parfois arriver **avec quelques minutes de retard**, ou dans les **spams**.
+- Il y a une limite de **quelques emails par heure** par projet.
 
-## 10.3 Étape par étape — Twilio Verify + Supabase
+**C'est largement suffisant pour lancer et tester le produit.** Si le volume d'inscriptions
+augmente (plusieurs dizaines par jour), il suffit de brancher un vrai fournisseur SMTP — gratuit
+jusqu'à un certain volume, et ça prend 5 minutes, sans toucher au code.
 
-### A. Créer le compte Twilio et le Verify Service
+## 10.3 Passer à un fournisseur SMTP dédié (recommandé dès que le trafic grandit)
 
-1. Va sur [twilio.com/try-twilio](https://www.twilio.com/try-twilio) et crée un compte (email +
-   téléphone de vérification).
-2. Dans la Console Twilio, va dans **Verify** → **Services** → **Create a new Service**.
-   - Nom : `KickPredict Togo OTP`
-   - Note le **Service SID** (commence par `VA...`).
-3. Dans la Console Twilio, page d'accueil du compte : note ton **Account SID** (commence par
-   `AC...`) et ton **Auth Token** (bouton "Show").
-4. **Vérifie les permissions géographiques** : Console Twilio → **Messaging** → **Geo permissions**
-   → active bien le Togo (+228) dans la liste des pays autorisés (désactivé par défaut sur les
-   nouveaux comptes pour limiter la fraude).
-5. (Compte d'essai gratuit uniquement) Twilio en mode "trial" n'envoie des SMS qu'aux numéros que
-   tu as explicitement vérifiés dans la console. Pour toucher de vrais clients togolais, il faudra
-   passer en compte payant (recharge quelques dollars suffit pour commencer les tests réels).
+Options gratuites/pas chères qui fonctionnent bien avec le Togo :
 
-### B. Configurer Supabase
+| Fournisseur | Gratuit jusqu'à | Notes |
+|---|---|---|
+| **Resend** | 3 000 emails/mois, 100/jour | Le plus simple à connecter à Supabase, très bonne délivrabilité |
+| **Brevo (ex-Sendinblue)** | 300 emails/jour | Interface en français, bon support |
+| **SendGrid** | 100 emails/jour | Historique, un peu plus technique à configurer |
 
-1. Dashboard Supabase → ton projet → **Authentication** → **Providers** → **Phone**.
-2. Active **Enable phone provider**.
-3. **SMS provider** : sélectionne **Twilio Verify**.
-4. Renseigne :
-   - `Twilio Account SID` = ton Account SID (`AC...`)
-   - `Twilio Auth Token` = ton Auth Token
-   - `Twilio Verify Service SID` = ton Service SID (`VA...`)
-5. Sauvegarde.
-6. (Optionnel) Dans **Authentication** → **Settings**, ajuste la durée d'expiration de l'OTP si
-   besoin (par défaut souvent 60 secondes côté Supabase self-hosted, généralement plus long sur
-   le cloud managé — vérifie la valeur affichée et ajuste si tes utilisateurs se plaignent d'un
-   code expiré trop vite).
+### Étapes (exemple avec Resend)
 
-### C. Activer le canal WhatsApp (optionnel mais recommandé au Togo)
+1. Crée un compte sur [resend.com](https://resend.com) (gratuit, pas de carte bancaire requise
+   pour le tier gratuit)
+2. Vérifie un domaine d'envoi (ou utilise leur domaine de test pour commencer)
+3. Récupère ta clé API SMTP (**Resend → API Keys**)
+4. Dashboard Supabase → **Project Settings** → **Authentication** → **SMTP Settings**
+5. Active **"Enable Custom SMTP"** et renseigne :
+   - Host : `smtp.resend.com`
+   - Port : `465` (SSL) ou `587` (TLS)
+   - Username : `resend`
+   - Password : ta clé API Resend
+   - Sender email : une adresse sur ton domaine vérifié (ex: `noreply@kickpredict.tg`)
+6. **Save** — tous les emails d'authentification (OTP, etc.) passeront désormais par Resend,
+   sans limite de débit partagé et avec une bien meilleure délivrabilité.
 
-1. Console Twilio → **Messaging** → **Try it out** → **Send a WhatsApp message** (sandbox pour
-   commencer) ou configure un numéro WhatsApp Business officiel pour la production.
-2. Dans `.env.local` / variables Vercel : `NEXT_PUBLIC_OTP_CHANNEL=whatsapp`.
-3. Redéploie — le formulaire d'inscription (`app/(auth)/auth-form.tsx`) enverra automatiquement
-   l'OTP via WhatsApp au lieu du SMS.
-4. Teste avec ton propre numéro avant d'ouvrir au public (les sandbox WhatsApp Twilio demandent
-   parfois que le destinataire envoie d'abord un message-code au sandbox pour "opt-in" — à retirer
-   une fois un numéro WhatsApp Business officiel configuré).
+## 10.4 Tester le flow complet
 
-### D. Tester le flow complet
+1. Va sur `/inscription` sur ton déploiement (ou en local avec `npm run dev`)
+2. Saisis une adresse email réelle (la tienne pour commencer)
+3. Vérifie ta boîte de réception (et le dossier spam) — le code arrive en général en quelques
+   secondes avec le service par défaut
+4. Saisis le code → tu dois être redirigé vers `/dashboard`
 
-1. Va sur `/inscription` sur ton déploiement (ou en local avec `npm run dev`).
-2. Saisis un numéro togolais réel (le tien pour commencer).
-3. Vérifie la réception du code (SMS ou WhatsApp selon la config).
-4. Saisis le code → tu dois être redirigé vers `/dashboard`.
-5. En cas d'erreur, vérifie dans la Console Twilio → **Monitor** → **Logs** → **Errors** (les
-   erreurs de géo-permission ou de format de numéro y apparaissent clairement).
+## 10.5 Tester sans recevoir de vrai email (numéro/email de test)
 
-## 10.4 Numéros de test Supabase (développement, sans consommer de vrais SMS)
+Supabase permet aussi de configurer des identifiants de test avec un code OTP fixe, utile en
+développement. Pour l'email, le plus simple reste d'utiliser ta propre adresse (le volume est
+trop faible pour poser problème en phase de test). Si besoin d'un flow 100% automatisé sans
+boîte mail réelle (tests automatisés, CI), utilise l'API Admin de Supabase
+(`supabase.auth.admin.generateLink`) pour récupérer le lien/code directement côté serveur.
 
-Supabase permet de définir des "Test OTPs" pour des numéros de téléphone fixes : dans
-**Authentication** → **Settings** → section **Test OTP**, tu peux mapper un numéro fictif (ex:
-`+22800000000`) à un code fixe (ex: `123456`). Utile pour développer/tester l'interface sans
-dépenser de crédit Twilio à chaque test.
+## 10.6 Le numéro de téléphone reste utile — juste pas pour se connecter
 
-## 10.5 Alternative si Twilio pose problème administrativement
-
-Si l'ouverture d'un compte Twilio (carte bancaire internationale, vérification) est un blocage
-au Togo, les alternatives supportées nativement par Supabase sont **Vonage** et **MessageBird** —
-la configuration est similaire (Account/API key + Secret dans le même écran **Authentication** →
-**Providers** → **Phone**). Vérifie leur couverture et leurs tarifs pour le Togo avant de choisir.
+Le champ `phone` de la table `profiles` (voir `supabase/migrations/`) est conservé pour un usage
+futur : alertes WhatsApp sur les pronostics, contact support, etc. Il n'est simplement plus
+utilisé comme identifiant de connexion.

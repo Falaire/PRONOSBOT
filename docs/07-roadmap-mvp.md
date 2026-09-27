@@ -15,7 +15,7 @@ togolaises au début plutôt qu'un pipeline de données 100% automatique).
 
 ## Semaine 2 — Authentification + Dashboard + Landing
 
-- [x] Auth téléphone + OTP (Supabase Auth)
+- [x] Auth email + OTP (Supabase Auth)
 - [x] Landing page + Dashboard "Matchs du jour" avec gating free/premium
 - [x] Page détail d'un match (probabilités, explication, value bet)
 - [x] Page "Historique de précision" (même avec peu de données au début — la transparence compte

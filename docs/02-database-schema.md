@@ -34,7 +34,8 @@ auth.users (Supabase Auth)
 | Colonne | Type | Notes |
 |---|---|---|
 | id | uuid PK | = auth.users.id |
-| phone | text unique | identifiant principal (OTP SMS) |
+| email | text | identifiant principal (authentification par OTP email) |
+| phone | text unique | optionnel, renseigné plus tard (alertes WhatsApp, paiement Mobile Money) |
 | full_name | text | |
 | role | enum `user` \| `admin` | |
 | telegram_chat_id | text | pour les alertes |

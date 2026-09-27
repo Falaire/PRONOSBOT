@@ -10,7 +10,7 @@ sans carte bancaire.
 La documentation produit complète (architecture, schéma BDD, wireframes, flow de paiement,
 prompt IA, monétisation, roadmap MVP, APIs externes, cadre juridique) est dans **[`docs/`](docs/)**.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FFalaire%2FPRONOSBOT%2Ftree%2Farena%2F01a0e32c-pronosbot&project-name=kickpredict-togo&repository-name=kickpredict-togo&env=NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,API_FOOTBALL_KEY,PAYMENTS_PROVIDER,NEXT_PUBLIC_MANUAL_TMONEY_NUMBER,NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER,NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER,NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER,NEXT_PUBLIC_OTP_CHANNEL,CRON_SECRET&envDescription=Voir%20la%20liste%20complete%20et%20les%20valeurs%20dans%20docs%2F11-deploiement-vercel.md)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FFalaire%2FPRONOSBOT%2Ftree%2Farena%2F01a0e32c-pronosbot&project-name=kickpredict-togo&repository-name=kickpredict-togo&env=NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,API_FOOTBALL_KEY,PAYMENTS_PROVIDER,NEXT_PUBLIC_MANUAL_TMONEY_NUMBER,NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER,NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER,NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER,CRON_SECRET&envDescription=Voir%20la%20liste%20complete%20et%20les%20valeurs%20dans%20docs%2F11-deploiement-vercel.md)
 
 Guide détaillé pas à pas (avec toutes les valeurs prêtes à copier) : [docs/11-deploiement-vercel.md](docs/11-deploiement-vercel.md).
 
@@ -29,11 +29,12 @@ fictives dans `lib/demo-data.ts`) pour visualiser tout le produit immédiatement
 ## Mise en route complète (production)
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
-2. Dans **SQL Editor**, colle le contenu de `supabase/migrations/0001_init.sql`
+2. Dans **SQL Editor**, exécute dans l'ordre le contenu de `supabase/migrations/0001_init.sql`
+   puis `supabase/migrations/0002_email_auth.sql`
    - ⚠️ Erreur `relation "profiles" already exists` ? Ton projet a probablement déjà une table
      `profiles` créée par le script de démarrage par défaut de Supabase. Exécute d'abord
      `supabase/migrations/0000_reset_before_install.sql` (sans danger sur un projet neuf), puis
-     relance `0001_init.sql`.
+     relance `0001_init.sql` et `0002_email_auth.sql`.
 3. Renseigne `.env.local` (Supabase, CinetPay, API-Football, Telegram — voir `.env.example`)
 4. `node --env-file=.env.local scripts/seed.mjs` → importe les ligues + équipes de départ
 5. Déploie sur [Vercel](https://vercel.com) (Hobby gratuit) — `vercel.json` configure déjà les
@@ -86,7 +87,7 @@ CinetPay (Mobile Money T-Money/Flooz) · API-Football · Telegram Bot API · Ver
 ```
 app/
   page.tsx                       landing page (hero, features, pricing, CTA WhatsApp)
-  (auth)/connexion, inscription  authentification téléphone + OTP SMS
+  (auth)/connexion, inscription  authentification email + code OTP
   dashboard/                     matchs du jour, détail match, abonnement, historique, compte
   admin/                         déclenchement manuel du pipeline (sync / génération / notif)
   api/
@@ -123,5 +124,5 @@ docs/                            spec produit complète (voir ci-dessous)
 | 7 | [docs/07-roadmap-mvp.md](docs/07-roadmap-mvp.md) | Roadmap MVP en 4-6 semaines |
 | 8 | [docs/08-external-apis.md](docs/08-external-apis.md) | APIs et services externes |
 | 9 | [docs/09-legal.md](docs/09-legal.md) | Points d'attention juridiques |
-| 10 | [docs/10-sms-otp-setup.md](docs/10-sms-otp-setup.md) | Configuration du fournisseur SMS/WhatsApp pour l'OTP (Twilio + Supabase) |
+| 10 | [docs/10-sms-otp-setup.md](docs/10-sms-otp-setup.md) | Authentification par email + code OTP (Supabase, gratuit, sans Twilio) |
 | 11 | [docs/11-deploiement-vercel.md](docs/11-deploiement-vercel.md) | Déploiement Vercel étape par étape |

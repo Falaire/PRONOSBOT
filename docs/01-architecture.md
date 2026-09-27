@@ -40,7 +40,7 @@ app/
   page.tsx                        Landing page (hero, features, pricing, WhatsApp CTA)
   layout.tsx, globals.css         Layout racine, thème sombre par défaut
   (auth)/
-    auth-form.tsx                 Formulaire partagé téléphone + OTP SMS
+    auth-form.tsx                 Formulaire partagé email + code OTP
     connexion/page.tsx            /connexion
     inscription/page.tsx          /inscription
   dashboard/
@@ -87,7 +87,7 @@ vercel.json                               Déclaration des 3 crons
 | Choix | Raison |
 |---|---|
 | **Next.js App Router** | Un seul déploiement (front + API routes), SSR pour un chargement rapide sur réseau 3G, Vercel gratuit (Hobby) suffit pour le MVP. |
-| **Supabase** (au lieu de NestJS + Postgres séparé) | Postgres managé gratuit, Auth par téléphone/OTP intégrée, Row Level Security pour ne jamais exposer les clés admin côté client, un seul service à opérer -> moins de DevOps pour une équipe réduite. |
+| **Supabase** (au lieu de NestJS + Postgres séparé) | Postgres managé gratuit, Auth par email/OTP intégrée (service d'email inclus, sans fournisseur externe), Row Level Security pour ne jamais exposer les clés admin côté client, un seul service à opérer -> moins de DevOps pour une équipe réduite. |
 | **CinetPay** | Agrégateur qui couvre nativement T-Money et Flooz au Togo (contrairement à Stripe/PayPal), API REST simple, webhook standard. |
 | **Pas de microservices** | Un mono-repo Next.js suffit pour un MVP à 1-3 devs ; on découplera vers NestJS/queues seulement si le volume l'exige (voir section 7, post-MVP). |
 | **Elo + Poisson avant tout LLM** | Coût marginal ≈ 0 par pronostic, latence quasi nulle, résultats explicables et vérifiables — indispensable pour la confiance des utilisateurs togolais qui paient de leur poche. |

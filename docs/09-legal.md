@@ -50,8 +50,9 @@ l'Ouest, y compris probablement au Togo.
   - Déclaration/enregistrement de l'activité de traitement de données si le volume d'utilisateurs
     le requiert (à vérifier avec un juriste local selon le seuil applicable).
   - Politique de confidentialité claire (déjà ébauchée dans `app/legal/confidentialite/page.tsx`),
-    précisant la finalité de la collecte du numéro de téléphone, la durée de conservation, et le
-    droit à la suppression du compte.
+    précisant la finalité de la collecte de l'email (authentification) et du numéro de téléphone
+    (optionnel, alertes WhatsApp/paiement Mobile Money), la durée de conservation, et le droit à
+    la suppression du compte.
   - Ne jamais stocker de code secret Mobile Money ou d'identifiants opérateur (déjà respecté :
     ces informations transitent uniquement via CinetPay/l'opérateur, jamais via nos serveurs).
 

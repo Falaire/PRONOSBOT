@@ -46,7 +46,6 @@ NEXT_PUBLIC_MANUAL_TMONEY_NUMBER=+228 70 65 87 96
 NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER=
 NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER=KickPredict Togo
 NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER=+22870658796
-NEXT_PUBLIC_OTP_CHANNEL=sms
 CRON_SECRET=c5be5a2a0a975779ca5779ba1acd0bca112d46025afe35b4ef8c989cb2b0e909
 ```
 
@@ -86,15 +85,19 @@ Une fois déployé, teste dans l'ordre :
 - [ ] `https://TON-URL.vercel.app/dashboard/abonnement` → affiche le panneau de paiement manuel
       avec le numéro **+228 70 65 87 96** et Flooz grisé "(bientôt)"
 - [ ] `https://TON-URL.vercel.app/admin` → redirige vers `/dashboard` (normal, pas encore admin)
-- [ ] `https://TON-URL.vercel.app/inscription` → le formulaire OTP s'affiche (l'envoi réel du SMS
-      ne fonctionnera qu'une fois Twilio configuré dans Supabase, voir doc 10)
+- [ ] `https://TON-URL.vercel.app/inscription` → le formulaire d'inscription par email s'affiche,
+      et l'envoi du code OTP par email fonctionne directement (aucune config supplémentaire
+      requise, voir doc 10)
 
 ## 11.6 Étapes suivantes une fois déployé
 
-1. **Exécuter la migration Supabase** (`supabase/migrations/0001_init.sql` dans le SQL Editor) —
-   sans ça, inscription/abonnement restent en mode démo (aucune donnée persistée).
-2. **Configurer Twilio** (doc 10) pour que l'OTP par SMS/WhatsApp fonctionne réellement.
-3. **T'inscrire une première fois** sur le site déployé, puis te passer admin en SQL :
+1. **Exécuter les migrations Supabase** (`supabase/migrations/0001_init.sql` puis
+   `0002_email_auth.sql`, dans le SQL Editor, dans cet ordre) — sans ça, inscription/abonnement
+   restent en mode démo (aucune donnée persistée).
+2. (Optionnel, quand le volume grandit) **Brancher un SMTP dédié** (Resend, doc 10) pour ne plus
+   dépendre du service d'email gratuit limité en débit de Supabase.
+3. **T'inscrire une première fois** sur le site déployé (avec ton email), puis te passer admin
+   en SQL :
    ```sql
    update profiles set role = 'admin' where id = 'TON_USER_ID';
    ```

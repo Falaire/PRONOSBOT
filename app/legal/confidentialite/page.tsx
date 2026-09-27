@@ -9,9 +9,10 @@ export default function ConfidentialitePage() {
           <h1 className="text-2xl font-bold text-white mb-4">Politique de confidentialité</h1>
           <div className="space-y-4 text-sm text-white/70 leading-relaxed">
             <p>
-              Nous collectons uniquement les données nécessaires au fonctionnement du Service : numéro de téléphone
-              (authentification et alertes), historique d'abonnement et de paiement (via notre prestataire Mobile
-              Money), et données d'usage anonymisées.
+              Nous collectons uniquement les données nécessaires au fonctionnement du Service : adresse email
+              (authentification), numéro de téléphone si vous le renseignez (alertes WhatsApp, paiement Mobile
+              Money), historique d'abonnement et de paiement (via notre prestataire Mobile Money), et données
+              d'usage anonymisées.
             </p>
             <p>
               Nous ne vendons aucune donnée personnelle à des tiers. Les données de paiement transitent directement
