@@ -10,8 +10,8 @@ export function getPaymentsProvider(): PaymentsProvider {
 }
 
 export const MANUAL_PAYMENT_INFO = {
-  tmoneyNumber: process.env.NEXT_PUBLIC_MANUAL_TMONEY_NUMBER ?? "Non configuré",
-  floozNumber: process.env.NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER ?? "Non configuré",
+  tmoneyNumber: process.env.NEXT_PUBLIC_MANUAL_TMONEY_NUMBER || "",
+  floozNumber: process.env.NEXT_PUBLIC_MANUAL_FLOOZ_NUMBER || "",
   holderName: process.env.NEXT_PUBLIC_MANUAL_PAYMENT_HOLDER ?? "KickPredict Togo",
-  whatsappNumber: process.env.NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER ?? "22890000000",
+  whatsappNumber: (process.env.NEXT_PUBLIC_MANUAL_WHATSAPP_NUMBER ?? "22890000000").replace(/\D/g, ""),
 };

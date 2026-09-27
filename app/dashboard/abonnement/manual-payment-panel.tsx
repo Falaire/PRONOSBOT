@@ -28,6 +28,7 @@ export function ManualPaymentPanel({
   const [success, setSuccess] = useState(false);
 
   const selected = plans.find((p) => p.code === planCode) ?? plans[0];
+  const floozAvailable = Boolean(manualInfo.floozNumber);
   const merchantNumber = operator === "tmoney" ? manualInfo.tmoneyNumber : manualInfo.floozNumber;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -114,12 +115,18 @@ export function ManualPaymentPanel({
             </button>
             <button
               type="button"
+              disabled={!floozAvailable}
               onClick={() => setOperator("flooz")}
-              className={`rounded-lg border px-3 py-2 text-sm font-semibold ${operator === "flooz" ? "border-brand-500 bg-brand-500/10 text-brand-400" : "border-white/15 text-white/60"}`}
+              className={`rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${operator === "flooz" ? "border-brand-500 bg-brand-500/10 text-brand-400" : "border-white/15 text-white/60"}`}
             >
-              Flooz
+              Flooz {!floozAvailable && "(bientôt)"}
             </button>
           </div>
+          {!floozAvailable && (
+            <p className="text-[11px] text-white/40 mt-1">
+              Flooz (Moov Africa) sera bientôt disponible. Utilisez T-Money pour l'instant.
+            </p>
+          )}
         </div>
 
         <div>

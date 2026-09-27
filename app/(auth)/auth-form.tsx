@@ -27,11 +27,20 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
     return `+228${digits}`; // indicatif Togo par défaut
   }
 
+  // "sms" (Twilio SMS/Twilio Verify) ou "whatsapp" (Twilio + canal WhatsApp, moins cher et très
+  // utilisé au Togo) — voir docs/10-sms-otp-setup.md pour la configuration côté Supabase/Twilio.
+  const otpChannel = (process.env.NEXT_PUBLIC_OTP_CHANNEL === "whatsapp" ? "whatsapp" : "sms") as
+    | "sms"
+    | "whatsapp";
+
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: toE164(phone) });
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: toE164(phone),
+      options: { channel: otpChannel },
+    });
     setLoading(false);
     if (error) {
       setError(error.message);
@@ -85,14 +94,14 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Envoi..." : "Recevoir le code par SMS"}
+            {loading ? "Envoi..." : otpChannel === "whatsapp" ? "Recevoir le code par WhatsApp" : "Recevoir le code par SMS"}
           </Button>
         </form>
       ) : (
         <form onSubmit={verifyOtp} className="space-y-4">
           <div>
             <label className="text-sm text-white/70 flex items-center gap-1">
-              <ShieldCheck className="w-4 h-4" /> Code reçu par SMS
+              <ShieldCheck className="w-4 h-4" /> Code reçu par {otpChannel === "whatsapp" ? "WhatsApp" : "SMS"}
             </label>
             <input
               required

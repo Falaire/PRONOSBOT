@@ -115,3 +115,5 @@ docs/                            spec produit complète (voir ci-dessous)
 | 7 | [docs/07-roadmap-mvp.md](docs/07-roadmap-mvp.md) | Roadmap MVP en 4-6 semaines |
 | 8 | [docs/08-external-apis.md](docs/08-external-apis.md) | APIs et services externes |
 | 9 | [docs/09-legal.md](docs/09-legal.md) | Points d'attention juridiques |
+| 10 | [docs/10-sms-otp-setup.md](docs/10-sms-otp-setup.md) | Configuration du fournisseur SMS/WhatsApp pour l'OTP (Twilio + Supabase) |
+| 11 | [docs/11-deploiement-vercel.md](docs/11-deploiement-vercel.md) | Déploiement Vercel étape par étape |
