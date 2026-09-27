@@ -80,8 +80,29 @@ trop faible pour poser problème en phase de test). Si besoin d'un flow 100% aut
 boîte mail réelle (tests automatisés, CI), utilise l'API Admin de Supabase
 (`supabase.auth.admin.generateLink`) pour récupérer le lien/code directement côté serveur.
 
-## 10.6 Le numéro de téléphone reste utile — juste pas pour se connecter
+## 10.6 Le numéro de téléphone reste utile — pas pour se connecter, mais pour limiter l'abus
 
-Le champ `phone` de la table `profiles` (voir `supabase/migrations/`) est conservé pour un usage
-futur : alertes WhatsApp sur les pronostics, contact support, etc. Il n'est simplement plus
-utilisé comme identifiant de connexion.
+Une adresse email seule est trop facile à multiplier à l'infini (services d'email jetable type
+temp-mail) pour réclamer plusieurs fois l'essai gratuit de 3 jours. Pour limiter ça **sans
+dépendre d'un envoi de SMS payant**, le produit demande le numéro de téléphone juste après la
+vérification de l'email, avant d'activer l'essai gratuit :
+
+- Le numéro est normalisé et contrôlé au format (8 chiffres togolais plausibles) —
+  voir `lib/phone.ts`.
+- Il doit être **unique** : impossible de l'associer à deux comptes différents
+  (`profiles.phone`).
+- Une table dédiée, `trial_phone_ledger` (migration `0003_phone_trial_gate.sql`), retient pour
+  toujours qu'un numéro a déjà servi à un essai gratuit — même si le compte est supprimé
+  ensuite. Un numéro déjà utilisé peut créer un compte et se connecter normalement, mais
+  n'obtient pas de second essai gratuit (il doit passer directement à un abonnement payant).
+
+⚠️ **Limite honnête** : comme le numéro n'est pas vérifié par SMS/appel, rien n'empêche
+techniquement quelqu'un de saisir un faux numéro plausible pour chaque nouveau compte. Cette
+mesure bloque l'abus « facile » (réutiliser son vrai numéro avec plusieurs emails jetables),
+pas un attaquant déterminé et automatisé. Si l'abus persiste à grande échelle, les leviers
+suivants (par ordre de coût croissant) :
+1. Ajouter un CAPTCHA gratuit (ex: Cloudflare Turnstile) sur le formulaire d'inscription pour
+   bloquer les scripts automatisés.
+2. Limiter le nombre d'inscriptions par adresse IP/appareil.
+3. Vérifier réellement le numéro par SMS/WhatsApp (Twilio Verify, voir sections précédentes de
+   ce document) — le plus fiable, mais payant par tentative.

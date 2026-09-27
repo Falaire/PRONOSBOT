@@ -29,12 +29,12 @@ fictives dans `lib/demo-data.ts`) pour visualiser tout le produit immédiatement
 ## Mise en route complète (production)
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
-2. Dans **SQL Editor**, exécute dans l'ordre le contenu de `supabase/migrations/0001_init.sql`
-   puis `supabase/migrations/0002_email_auth.sql`
+2. Dans **SQL Editor**, exécute dans l'ordre le contenu de `supabase/migrations/0001_init.sql`,
+   puis `0002_email_auth.sql`, puis `0003_phone_trial_gate.sql`
    - ⚠️ Erreur `relation "profiles" already exists` ? Ton projet a probablement déjà une table
      `profiles` créée par le script de démarrage par défaut de Supabase. Exécute d'abord
      `supabase/migrations/0000_reset_before_install.sql` (sans danger sur un projet neuf), puis
-     relance `0001_init.sql` et `0002_email_auth.sql`.
+     relance les migrations `0001` → `0003` dans l'ordre.
 3. Renseigne `.env.local` (Supabase, CinetPay, API-Football, Telegram — voir `.env.example`)
 4. `node --env-file=.env.local scripts/seed.mjs` → importe les ligues + équipes de départ
 5. Déploie sur [Vercel](https://vercel.com) (Hobby gratuit) — `vercel.json` configure déjà les

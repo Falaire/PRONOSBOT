@@ -52,7 +52,9 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
       setError(error.message);
       return;
     }
-    router.push("/dashboard");
+    // Le tableau de bord vérifie lui-même si le profil a un numéro enregistré et redirige
+    // automatiquement vers /dashboard si c'est déjà le cas (connexion d'un compte existant).
+    router.push("/completer-profil");
   }
 
   return (
