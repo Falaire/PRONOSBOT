@@ -1,28 +1,36 @@
 {
-  "name": "pronosbot",
+  "name": "kickpredict-togo",
   "version": "0.1.0",
   "private": true,
-  "description": "SaaS de pronostics sportifs IA pour le Togo (Elo + Poisson)",
+  "description": "KickPredict Togo — SaaS de pronostics football IA (Elo + Poisson) pour le Togo et l'UEMOA, paiement Mobile Money (T-Money / Flooz)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "test": "node --test tests/",
+    "start": "next start -p ${PORT:-3000}",
+    "lint": "next lint",
+    "test": "node --import tsx --test tests/*.test.ts",
     "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
-    "next": "14.2.5",
+    "next": "15.5.26",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "@supabase/supabase-js": "2.44.0",
-    "@supabase/ssr": "0.4.0"
+    "@supabase/ssr": "0.4.0",
+    "clsx": "2.1.1",
+    "tailwind-merge": "2.4.0",
+    "lucide-react": "0.408.0",
+    "date-fns": "3.6.0",
+    "zod": "3.23.8"
   },
   "devDependencies": {
-    "typescript": "5.5.0",
+    "typescript": "5.5.4",
     "@types/node": "20.14.0",
     "@types/react": "18.3.0",
+    "@types/react-dom": "18.3.0",
     "tailwindcss": "3.4.0",
-    "postcss": "8.4.0",
-    "autoprefixer": "10.4.0"
+    "postcss": "8.5.28",
+    "autoprefixer": "10.4.0",
+    "tsx": "4.16.2"
   }
 }
