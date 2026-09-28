@@ -23,6 +23,8 @@ export type DemoFixture = {
   explanation: string;
   isValueBet: boolean;
   free: boolean;
+  /** Cotes réelles du marché (issues d'un bookmaker comme 1xBet) quand elles sont disponibles. */
+  odds?: { home: number; draw: number; away: number };
 };
 
 export const DEMO_FIXTURES: DemoFixture[] = [

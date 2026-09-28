@@ -2,7 +2,7 @@ import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
 import { MatchCard } from "@/components/MatchCard";
 import { Badge } from "@/components/ui/badge";
-import { DEMO_FIXTURES } from "@/lib/demo-data";
+import { getTodayFixtures } from "@/lib/fixtures";
 import { getCurrentUserState, getFreeLimit } from "@/lib/subscription";
 import { Sparkles } from "lucide-react";
 
@@ -10,9 +10,9 @@ export default async function DashboardPage() {
   const { isPremium, trialEndsAt } = await getCurrentUserState();
   const freeLimit = getFreeLimit();
 
-  // TODO: remplacer DEMO_FIXTURES par un fetch Supabase réel :
-  // select * from fixtures join predictions ... where kickoff_at::date = today order by league priority
-  const fixtures = DEMO_FIXTURES;
+  // Vrais matchs synchronisés depuis API-Football (avec repli sur des exemples de démo
+  // tant qu'aucune synchronisation n'a encore été effectuée depuis /admin).
+  const fixtures = await getTodayFixtures();
 
   const visibleFree = fixtures.filter((f) => f.free);
   const visiblePremium = fixtures.filter((f) => !f.free);

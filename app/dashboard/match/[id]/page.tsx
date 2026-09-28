@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfidenceBar } from "@/components/ui/confidence-bar";
 import { Button } from "@/components/ui/button";
-import { DEMO_FIXTURES } from "@/lib/demo-data";
+import { getFixtureById } from "@/lib/fixtures";
 import { getCurrentUserState } from "@/lib/subscription";
 import { formatDateTimeLome } from "@/lib/utils";
 import { notFound } from "next/navigation";
@@ -12,7 +12,7 @@ import { Lock, TrendingUp } from "lucide-react";
 
 export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const fixture = DEMO_FIXTURES.find((f) => f.id === id);
+  const fixture = await getFixtureById(id);
   if (!fixture) notFound();
 
   const { isPremium } = await getCurrentUserState();
@@ -59,6 +59,26 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   <div className="text-2xl font-bold text-white">{Math.round(fixture.probAway * 100)}%</div>
                 </div>
               </Card>
+
+              {fixture.odds && (
+                <Card className="mb-4">
+                  <h3 className="font-semibold text-white mb-2">Cotes du marché (référence bookmaker)</h3>
+                  <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                    <div className="rounded-lg bg-white/5 px-3 py-2">
+                      <div className="text-white/50 text-xs">1</div>
+                      <div className="font-semibold text-white">{fixture.odds.home.toFixed(2)}</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 px-3 py-2">
+                      <div className="text-white/50 text-xs">X</div>
+                      <div className="font-semibold text-white">{fixture.odds.draw.toFixed(2)}</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 px-3 py-2">
+                      <div className="text-white/50 text-xs">2</div>
+                      <div className="font-semibold text-white">{fixture.odds.away.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               <Card className="mb-4">
                 <h3 className="font-semibold text-white mb-2">Autres marchés</h3>
