@@ -58,7 +58,12 @@ export function PhoneGateForm() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Erreur");
-      router.push("/dashboard");
+      // Rechargement complet (pas router.push) : le lien "Pronostics" du menu précharge
+      // /dashboard en arrière-plan dès l'affichage de cette page, avec l'ancien état
+      // (numéro absent) mis en cache côté navigation. Un push client réutiliserait ce cache
+      // et renverrait l'utilisateur ici en boucle — un rechargement complet force une lecture
+      // fraîche du profil (numéro bien enregistré) côté serveur.
+      window.location.href = "/dashboard";
     } catch (e: any) {
       setError(e.message ?? "Erreur");
     } finally {

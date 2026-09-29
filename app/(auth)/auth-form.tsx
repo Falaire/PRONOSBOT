@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 /**
  * Authentification par email + code OTP (6 chiffres), via Supabase Auth.
@@ -19,7 +19,6 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
   const supabase = createClient();
 
   async function sendOtp(e: React.FormEvent) {
@@ -29,7 +28,9 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: true,
+        // Inscription : crée un compte si l'email est nouveau. Connexion : réservé aux
+        // comptes existants, on ne veut pas créer un compte en douce depuis "Connexion".
+        shouldCreateUser: mode === "inscription",
         // Sur le plan gratuit Supabase, l'email de connexion ne peut afficher qu'un lien
         // cliquable (pas de code, ça nécessite un SMTP personnalisé) : on pointe donc ce
         // lien vers notre propre route qui termine la connexion automatiquement.
@@ -38,7 +39,11 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
     });
     setLoading(false);
     if (error) {
-      setError(error.message);
+      if (mode === "connexion" && /signups not allowed/i.test(error.message)) {
+        setError("Aucun compte trouvé avec cet email. Crée d'abord un compte gratuit ci-dessous.");
+      } else {
+        setError(error.message);
+      }
       return;
     }
     setStep("otp");
@@ -58,9 +63,9 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
       setError(error.message);
       return;
     }
-    // Le tableau de bord vérifie lui-même si le profil a un numéro enregistré et redirige
-    // automatiquement vers /dashboard si c'est déjà le cas (connexion d'un compte existant).
-    router.push("/completer-profil");
+    // Rechargement complet (pas router.push) pour éviter de servir une version mise en cache
+    // de la page suivante (même précaution que pour l'étape téléphone, voir phone-gate-form.tsx).
+    window.location.href = "/completer-profil";
   }
 
   return (
@@ -93,6 +98,23 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Envoi..." : "Recevoir le code par email"}
           </Button>
+          <p className="text-sm text-white/50 text-center">
+            {mode === "inscription" ? (
+              <>
+                Déjà un compte ?{" "}
+                <Link href="/connexion" className="text-brand-400 font-semibold hover:underline">
+                  Connecte-toi
+                </Link>
+              </>
+            ) : (
+              <>
+                Pas encore de compte ?{" "}
+                <Link href="/inscription" className="text-brand-400 font-semibold hover:underline">
+                  Essai gratuit 3 jours
+                </Link>
+              </>
+            )}
+          </p>
         </form>
       ) : (
         <div className="space-y-4">
