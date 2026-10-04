@@ -5,21 +5,25 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Phone, Gift, KeyRound } from "lucide-react";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { isPasswordValid, PASSWORD_REQUIREMENTS_TEXT } from "@/lib/password-strength";
+import { Phone, Gift, KeyRound, Eye, EyeOff } from "lucide-react";
 
 /**
  * Étapes obligatoires après l'inscription par email, avant d'accéder au tableau de bord :
  *  1. Numéro de téléphone — limite l'abus de l'essai gratuit (un numéro = un seul essai, pour
  *     toujours) sans dépendre d'un envoi de SMS payant. Voir app/api/account/complete-signup.
- *  2. Code de sécurité (6 chiffres) — une fois défini, les prochaines connexions se font avec
- *     email + ce code (supabase.auth.signInWithPassword), sans devoir renvoyer un email à
- *     chaque fois. Le lien par email reste toujours disponible en secours si le code est oublié.
+ *  2. Code de sécurité (lettres + chiffres + caractère spécial) — une fois défini, les prochaines
+ *     connexions se font avec email + ce code (supabase.auth.signInWithPassword), sans devoir
+ *     renvoyer un email à chaque fois. Le lien par email reste toujours disponible en secours si
+ *     le code est oublié.
  */
 export function PhoneGateForm() {
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [codeConfirm, setCodeConfirm] = useState("");
+  const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,8 +78,8 @@ export function PhoneGateForm() {
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!/^\d{6}$/.test(code)) {
-      setError("Le code doit contenir exactement 6 chiffres.");
+    if (!isPasswordValid(code)) {
+      setError(`Code trop faible. ${PASSWORD_REQUIREMENTS_TEXT}`);
       return;
     }
     if (code !== codeConfirm) {
@@ -142,23 +146,34 @@ export function PhoneGateForm() {
         <h1 className="text-xl font-bold text-white">Crée ton code de sécurité</h1>
       </div>
       <p className="text-sm text-white/60 mb-5">
-        Un code à 6 chiffres pour te reconnecter plus tard avec ton email + ce code — sans attendre un nouvel
+        Un code personnel pour te reconnecter plus tard avec ton email + ce code — sans attendre un nouvel
         email à chaque fois. Tu pourras toujours te connecter par email si tu l&apos;oublies.
       </p>
       <form onSubmit={submitCode} className="space-y-4">
         <div>
           <label className="text-sm text-white/70 flex items-center gap-1">
-            <KeyRound className="w-4 h-4" /> Code à 6 chiffres
+            <KeyRound className="w-4 h-4" /> Code de sécurité
           </label>
-          <input
-            required
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="••••••"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-            className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-[0.4em]"
-          />
+          <div className="relative mt-1">
+            <input
+              required
+              type={showCode ? "text" : "password"}
+              placeholder="Ex : Togo2024!"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 pr-10 text-white text-sm placeholder:text-white/30"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCode((v) => !v)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+              tabIndex={-1}
+            >
+              {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <PasswordStrengthMeter password={code} />
+          <p className="text-xs text-white/40 mt-1">{PASSWORD_REQUIREMENTS_TEXT}</p>
         </div>
         <div>
           <label className="text-sm text-white/70 flex items-center gap-1">
@@ -166,12 +181,11 @@ export function PhoneGateForm() {
           </label>
           <input
             required
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="••••••"
+            type={showCode ? "text" : "password"}
+            placeholder="Ex : Togo2024!"
             value={codeConfirm}
-            onChange={(e) => setCodeConfirm(e.target.value.replace(/\D/g, ""))}
-            className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-[0.4em]"
+            onChange={(e) => setCodeConfirm(e.target.value)}
+            className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
           />
         </div>
         {error && <p className="text-sm text-red-400">{error}</p>}

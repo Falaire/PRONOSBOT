@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, ShieldCheck, KeyRound } from "lucide-react";
+import { Mail, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -23,6 +23,7 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [securityCode, setSecurityCode] = useState("");
+  const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -113,17 +114,26 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
           </div>
           <div>
             <label className="text-sm text-white/70 flex items-center gap-1">
-              <KeyRound className="w-4 h-4" /> Code de sécurité (6 chiffres)
+              <KeyRound className="w-4 h-4" /> Code de sécurité
             </label>
-            <input
-              required
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="••••••"
-              value={securityCode}
-              onChange={(e) => setSecurityCode(e.target.value.replace(/\D/g, ""))}
-              className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-[0.4em]"
-            />
+            <div className="relative mt-1">
+              <input
+                required
+                type={showCode ? "text" : "password"}
+                placeholder="Ton code de sécurité"
+                value={securityCode}
+                onChange={(e) => setSecurityCode(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 pr-10 text-white text-sm placeholder:text-white/30"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCode((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                tabIndex={-1}
+              >
+                {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
