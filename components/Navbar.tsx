@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/SignOutButton";
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Zap, Sparkles } from "lucide-react";
+import { getCurrentUserState } from "@/lib/subscription";
 
-export function Navbar() {
+export async function Navbar() {
+  const { userId, isPremium } = await getCurrentUserState();
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-ink-950/70 backdrop-blur-xl">
       <div className="mx-auto max-w-6xl flex items-center justify-between px-4 py-3.5">
@@ -21,8 +25,24 @@ export function Navbar() {
           <Link href="/dashboard/historique" className="hover:text-white transition-colors">Précision IA</Link>
         </nav>
         <div className="flex items-center gap-2">
-          <Button href="/connexion" variant="ghost" size="sm">Connexion</Button>
-          <Button href="/inscription" variant="primary" size="sm">Essai gratuit</Button>
+          {userId ? (
+            <>
+              {isPremium && (
+                <span className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-accent-500 border border-accent-500/40 rounded-full px-2.5 py-1">
+                  <Sparkles className="w-3 h-3" /> Premium
+                </span>
+              )}
+              <Button href="/dashboard/compte" variant="outline" size="sm">
+                Mon compte
+              </Button>
+              <SignOutButton />
+            </>
+          ) : (
+            <>
+              <Button href="/connexion" variant="ghost" size="sm">Connexion</Button>
+              <Button href="/inscription" variant="primary" size="sm">Essai gratuit</Button>
+            </>
+          )}
         </div>
       </div>
     </header>

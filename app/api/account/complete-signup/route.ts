@@ -53,10 +53,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2. Enregistre le numéro sur le profil.
-  const { error: updateError } = await admin.from("profiles").update({ phone }).eq("id", user.id);
+  // 2. Enregistre le numéro sur le profil. On utilise un UPSERT (pas un simple update) :
+  //    si la ligne "profiles" n'existe pas encore pour une raison quelconque (trigger de
+  //    création différé, migration pas encore appliquée...), un .update() ne modifierait
+  //    silencieusement AUCUNE ligne (0 lignes affectées = pas d'erreur renvoyée par
+  //    PostgREST), et l'utilisateur resterait bloqué en boucle sur cette étape pour
+  //    toujours puisque son profil semblerait éternellement "sans numéro". L'upsert garantit
+  //    que la ligne existe réellement après cet appel.
+  const { data: savedProfile, error: updateError } = await admin
+    .from("profiles")
+    .upsert({ id: user.id, email: user.email, phone }, { onConflict: "id" })
+    .select("phone")
+    .single();
+
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+  if (savedProfile?.phone !== phone) {
+    return NextResponse.json(
+      { error: "Le numéro n'a pas pu être enregistré (réessaie, ou contacte le support)." },
+      { status: 500 }
+    );
   }
 
   // 3. Ce numéro a-t-il déjà servi à réclamer un essai gratuit (même sur un compte supprimé
