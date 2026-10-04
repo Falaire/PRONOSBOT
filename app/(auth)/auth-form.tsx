@@ -4,22 +4,45 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck, KeyRound } from "lucide-react";
 import Link from "next/link";
 
 /**
- * Authentification par email + code OTP (6 chiffres), via Supabase Auth.
- * Utilise le service d'envoi d'email intégré à Supabase — aucun fournisseur externe
- * (Twilio, etc.) n'est nécessaire. Voir docs/10-sms-otp-setup.md pour augmenter le volume
- * d'envoi si besoin (SMTP personnalisé, ex: Resend).
+ * Authentification par email + code.
+ *
+ * Deux méthodes pour un compte "connexion" existant :
+ *  - "code" (par défaut, rapide) : email + code de sécurité à 6 chiffres défini lors de
+ *    l'inscription (voir app/completer-profil/phone-gate-form.tsx), via
+ *    supabase.auth.signInWithPassword — aucun email renvoyé.
+ *  - "email" (secours) : lien de connexion envoyé par email (Supabase Auth OTP), utile si le
+ *    code est oublié, ou pour une toute première inscription (pas encore de code défini).
  */
 export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
+  const [method, setMethod] = useState<"code" | "email">(mode === "connexion" ? "code" : "email");
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [securityCode, setSecurityCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+
+  async function signInWithCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: securityCode });
+    setLoading(false);
+    if (error) {
+      setError(
+        "Email ou code incorrect — ou tu n'as pas encore créé de code de sécurité. Essaie \"Se connecter par email\" ci-dessous."
+      );
+      return;
+    }
+    // Rechargement complet pour que tous les composants serveur (Navbar, dashboard...) relisent
+    // un état de connexion frais. /dashboard renvoie lui-même vers /completer-profil si besoin.
+    window.location.href = "/dashboard";
+  }
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -68,15 +91,78 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
     window.location.href = "/completer-profil";
   }
 
+  // --- Connexion avec email + code de sécurité (méthode rapide, pas d'email renvoyé) ---
+  if (mode === "connexion" && method === "code") {
+    return (
+      <Card className="w-full max-w-sm">
+        <h1 className="text-xl font-bold text-white mb-1">Connexion</h1>
+        <p className="text-sm text-white/60 mb-5">Connecte-toi avec ton email et ton code de sécurité.</p>
+        <form onSubmit={signInWithCode} className="space-y-4">
+          <div>
+            <label className="text-sm text-white/70 flex items-center gap-1">
+              <Mail className="w-4 h-4" /> Adresse email
+            </label>
+            <input
+              required
+              type="email"
+              placeholder="toi@exemple.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-white/70 flex items-center gap-1">
+              <KeyRound className="w-4 h-4" /> Code de sécurité (6 chiffres)
+            </label>
+            <input
+              required
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="••••••"
+              value={securityCode}
+              onChange={(e) => setSecurityCode(e.target.value.replace(/\D/g, ""))}
+              className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-[0.4em]"
+            />
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Connexion..." : "Se connecter"}
+          </Button>
+          <div className="text-sm text-white/50 text-center space-y-1.5">
+            <p>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setMethod("email");
+                }}
+                className="text-brand-400 font-semibold hover:underline"
+              >
+                Se connecter par email à la place
+              </button>
+            </p>
+            <p>
+              Pas encore de compte ?{" "}
+              <Link href="/inscription" className="text-brand-400 font-semibold hover:underline">
+                Essai gratuit 3 jours
+              </Link>
+            </p>
+          </div>
+        </form>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-sm">
       <h1 className="text-xl font-bold text-white mb-1">
-        {mode === "inscription" ? "Créer un compte" : "Connexion"}
+        {mode === "inscription" ? "Créer un compte" : "Connexion par email"}
       </h1>
       <p className="text-sm text-white/60 mb-5">
         {mode === "inscription"
           ? "3 jours d'essai gratuit, sans carte bancaire."
-          : "Connectez-vous avec votre adresse email."}
+          : "Reçois un lien de connexion par email (utile si tu as oublié ton code)."}
       </p>
 
       {step === "email" ? (
@@ -107,12 +193,16 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
                 </Link>
               </>
             ) : (
-              <>
-                Pas encore de compte ?{" "}
-                <Link href="/inscription" className="text-brand-400 font-semibold hover:underline">
-                  Essai gratuit 3 jours
-                </Link>
-              </>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setMethod("code");
+                }}
+                className="text-brand-400 font-semibold hover:underline"
+              >
+                ← Se connecter avec mon code de sécurité
+              </button>
             )}
           </p>
         </form>

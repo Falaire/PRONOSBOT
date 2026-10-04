@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/SignOutButton";
+import { SecurityCodeForm } from "./security-code-form";
 import { getCurrentUserState } from "@/lib/subscription";
 
 export default async function ComptePage() {
@@ -39,6 +40,7 @@ export default async function ComptePage() {
                   Passer Premium
                 </Button>
               )}
+              <SecurityCodeForm />
               <SignOutButton className="w-full mt-3 border border-white/10" />
             </Card>
           )}
