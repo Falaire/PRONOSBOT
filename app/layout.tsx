@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { WhatsAppBubble } from "@/components/WhatsAppBubble";
 
 export const metadata: Metadata = {
   title: "KickPredict Togo — Pronostics football IA en FCFA",
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className="dark">
-      <body className="min-h-screen flex flex-col font-sans">{children}</body>
+      <body className="min-h-screen flex flex-col font-sans">
+        {children}
+        <WhatsAppBubble />
+      </body>
     </html>
   );
 }

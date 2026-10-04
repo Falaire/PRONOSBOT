@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PricingCard } from "@/components/PricingCard";
 import { MatchCard } from "@/components/MatchCard";
+import { FAQ } from "@/components/FAQ";
 import { DEMO_FIXTURES } from "@/lib/demo-data";
 import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
 import {
@@ -71,6 +72,20 @@ const STEPS = [
   },
 ];
 
+const LEAGUES_COVERED = [
+  "Ligue 1 Togo",
+  "Coupe d'Afrique des Nations",
+  "Ligue des Champions CAF",
+  "Ligue 1 Côte d'Ivoire",
+  "Ligue 1 Sénégal",
+  "Ligue des Champions UEFA",
+  "Premier League",
+  "LaLiga",
+  "Serie A",
+  "Bundesliga",
+  "Ligue 1",
+];
+
 const PLANS = [
   { code: "hebdo", name: "Hebdo", priceFcfa: 1000, durationDays: 7, features: ["Accès illimité 7 jours", "Alertes Telegram", "Idéal pour tester"] },
   { code: "mensuel", name: "Mensuel", priceFcfa: 3000, durationDays: 30, highlighted: true, features: ["Accès illimité", "Analyses détaillées + explications", "Alertes WhatsApp/Telegram", "Mode Value Bet"] },
@@ -128,6 +143,20 @@ export default function LandingPage() {
               <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-brand-500" /> Paiement Mobile Money sécurisé</span>
               <span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5 text-brand-500" /> Modèle statistique Elo + Poisson</span>
               <span className="flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-brand-500" /> Support WhatsApp réactif</span>
+            </div>
+          </div>
+
+          {/* Bande des ligues couvertes — défilement continu */}
+          <div className="relative border-t border-white/[0.06] py-5 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+            <div className="flex items-center gap-3 w-max animate-marquee">
+              {[...LEAGUES_COVERED, ...LEAGUES_COVERED].map((league, i) => (
+                <span
+                  key={`${league}-${i}`}
+                  className="shrink-0 text-xs font-medium text-white/45 border border-white/10 rounded-full px-3.5 py-1.5 whitespace-nowrap"
+                >
+                  {league}
+                </span>
+              ))}
             </div>
           </div>
         </section>
@@ -217,6 +246,38 @@ export default function LandingPage() {
             <Button href={`https://wa.me/${MANUAL_PAYMENT_INFO.whatsappNumber}`} variant="secondary" className="shrink-0">
               Rejoindre sur WhatsApp
             </Button>
+          </Card>
+        </section>
+
+        {/* FAQ */}
+        <section className="mx-auto max-w-3xl px-4 py-16">
+          <div className="text-center mb-10">
+            <Badge tone="neutral" className="mb-3">Questions fréquentes</Badge>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce que tu dois savoir</h2>
+          </div>
+          <FAQ />
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="mx-auto max-w-5xl px-4 pb-16">
+          <Card
+            variant="glow"
+            className="relative overflow-hidden text-center py-14 px-6 bg-gradient-to-br from-brand-500/15 via-ink-900 to-accent-500/10 border-brand-500/25"
+          >
+            <div className="absolute inset-0 opacity-30 bg-dot-grid [mask-image:radial-gradient(circle,black,transparent_70%)]" aria-hidden />
+            <div className="relative">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+                Prêt à parier plus intelligemment ?
+              </h2>
+              <p className="text-white/60 max-w-xl mx-auto mb-7 text-sm sm:text-base">
+                Rejoins KickPredict et reçois dès aujourd'hui des analyses claires sur les matchs du Togo, de
+                l'Afrique et des grands championnats européens.
+              </p>
+              <Button href="/inscription" size="lg" className="group">
+                Essai gratuit 3 jours
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Button>
+            </div>
           </Card>
         </section>
 

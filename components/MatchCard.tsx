@@ -63,6 +63,14 @@ export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: b
           {fixture.odds && (
             <p className="text-[10px] text-white/35">Cotes du marché (référence bookmaker) à titre indicatif.</p>
           )}
+          <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-white/[0.06]">
+            <Badge tone="neutral" className="text-[11px]">
+              +2,5 buts {Math.round(fixture.probOver25 * 100)}%
+            </Badge>
+            <Badge tone="neutral" className="text-[11px]">
+              BTTS {Math.round(fixture.probBtts * 100)}%
+            </Badge>
+          </div>
         </>
       )}
 
