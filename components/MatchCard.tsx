@@ -6,13 +6,27 @@ import { Lock, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import type { DemoFixture } from "@/lib/demo-data";
 import { BookmakerBetButton } from "@/components/BookmakerBetButton";
+import { SavePickButton } from "@/components/SavePickButton";
 
-export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: boolean }) {
+export function MatchCard({
+  fixture,
+  locked,
+  userId = null,
+  saved = false,
+}: {
+  fixture: DemoFixture;
+  locked: boolean;
+  userId?: string | null;
+  saved?: boolean;
+}) {
   return (
     <Card variant="glow" className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Badge tone="neutral">{fixture.league}</Badge>
-        <span className="text-xs text-white/45">{formatDateTimeLome(fixture.kickoff)}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/45">{formatDateTimeLome(fixture.kickoff)}</span>
+          {!locked && <SavePickButton fixtureId={fixture.id} userId={userId} initiallySaved={saved} />}
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">

@@ -1,22 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { BOOKMAKERS, getBookmakerUrl, buildBetSlipText } from "@/lib/bookmakers";
+import { BOOKMAKERS, getBookmakerDeepLink, buildBetSlipText, type BetSlipInfo } from "@/lib/bookmakers";
 import { Check, Copy, ExternalLink, Dices } from "lucide-react";
-import type { DemoFixture } from "@/lib/demo-data";
 
 /**
  * Honnêteté importante : aucun bookmaker (1xBet, Betwinner, Melbet, SportyBet...) n'offre
- * d'API publique permettant de créer automatiquement un coupon de pari pré-rempli. On copie
- * donc le résumé du pronostic dans le presse-papier et on ouvre le site du bookmaker choisi
- * (lien d'affiliation si configuré) : il suffit de coller/rechercher le match pour retrouver
- * le pari en 1-2 clics.
+ * d'API publique permettant de créer automatiquement un coupon de pari pré-rempli — ça
+ * demanderait un partenariat officiel qu'on n'a pas. On fait donc le maximum possible sans ça :
+ *   1. on copie le résumé du pronostic (match, marché, cote) dans le presse-papier,
+ *   2. sur Android, si on connaît le paquet de l'app du bookmaker, on l'ouvre DIRECTEMENT si
+ *      elle est déjà installée (sinon on retombe automatiquement sur le site, voir
+ *      lib/bookmakers.ts::getBookmakerDeepLink) ; sur iOS/desktop on ouvre le site (lien
+ *      d'affiliation si configuré) — iOS ouvre déjà l'app toute seule si son éditeur a configuré
+ *      les Universal Links pour son domaine, indépendamment de notre code.
+ *   3. il suffit de coller/rechercher le match une fois dans l'app ou sur le site pour
+ *      retrouver le pari exact.
  */
 export function BookmakerBetButton({
   fixture,
   variant = "compact",
 }: {
-  fixture: DemoFixture;
+  fixture: BetSlipInfo;
   variant?: "compact" | "full";
 }) {
   const [open, setOpen] = useState(variant === "full");
@@ -32,7 +37,14 @@ export function BookmakerBetButton({
     } catch {
       // Presse-papier indisponible (permissions navigateur) : on continue quand même vers le bookmaker.
     }
-    window.open(getBookmakerUrl(bookmaker), "_blank", "noopener,noreferrer");
+    const deepLink = getBookmakerDeepLink(bookmaker);
+    if (deepLink.startsWith("intent://")) {
+      // Les liens intent:// (Android) doivent être chargés dans l'onglet courant pour que
+      // Chrome les intercepte et bascule vers l'app installée (ou le site en repli sinon).
+      window.location.href = deepLink;
+    } else {
+      window.open(deepLink, "_blank", "noopener,noreferrer");
+    }
   }
 
   const grid = (

@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { ConfidenceBar } from "@/components/ui/confidence-bar";
 import { Button } from "@/components/ui/button";
 import { getFixtureById } from "@/lib/fixtures";
+import { getSavedPickForFixture } from "@/lib/saved-picks";
 import { getCurrentUserState } from "@/lib/subscription";
 import { formatDateTimeLome } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { Lock, TrendingUp } from "lucide-react";
 import { BookmakerBetButton } from "@/components/BookmakerBetButton";
+import { SavePickButton } from "@/components/SavePickButton";
 
 function marketLabel(market?: string): string {
   switch (market) {
@@ -33,8 +35,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const fixture = await getFixtureById(id);
   if (!fixture) notFound();
 
-  const { isPremium } = await getCurrentUserState();
+  const { userId, isPremium } = await getCurrentUserState();
   const locked = !fixture.free && !isPremium;
+  const savedPick = await getSavedPickForFixture(userId, id);
 
   return (
     <>
@@ -101,6 +104,25 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <Card className="mb-4">
                 <h3 className="font-semibold text-white mb-1">Parier sur ce match</h3>
                 <BookmakerBetButton fixture={fixture} variant="full" />
+              </Card>
+
+              <Card className="mb-4">
+                <h3 className="font-semibold text-white mb-1">Mon carnet de pronostics</h3>
+                <p className="text-xs text-white/40 mb-2">
+                  Garde ce match de côté avec le marché que tu vises et une note personnelle, pour le retrouver dans{" "}
+                  <a href="/dashboard/carnet" className="text-accent-500 hover:underline">
+                    mon carnet
+                  </a>
+                  .
+                </p>
+                <SavePickButton
+                  fixtureId={fixture.id}
+                  userId={userId}
+                  initiallySaved={savedPick.saved}
+                  initialMarket={savedPick.chosenMarket}
+                  initialNote={savedPick.note}
+                  variant="full"
+                />
               </Card>
 
               <Card className="mb-4">

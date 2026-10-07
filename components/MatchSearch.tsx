@@ -20,7 +20,17 @@ function normalize(s: string): string {
  * l'utilisateur cherche un match plus lointain qui n'est pas encore dans cette fenêtre, on
  * l'invite à nous le signaler plutôt que d'afficher un faux résultat vide sans explication.
  */
-export function MatchSearch({ fixtures, isPremium }: { fixtures: DemoFixture[]; isPremium: boolean }) {
+export function MatchSearch({
+  fixtures,
+  isPremium,
+  userId = null,
+  savedFixtureIds = [],
+}: {
+  fixtures: DemoFixture[];
+  isPremium: boolean;
+  userId?: string | null;
+  savedFixtureIds?: string[];
+}) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -28,6 +38,8 @@ export function MatchSearch({ fixtures, isPremium }: { fixtures: DemoFixture[]; 
     if (!q) return fixtures;
     return fixtures.filter((f) => normalize(`${f.home} ${f.away} ${f.league}`).includes(q));
   }, [fixtures, query]);
+
+  const savedSet = useMemo(() => new Set(savedFixtureIds), [savedFixtureIds]);
 
   return (
     <div>
@@ -64,7 +76,13 @@ export function MatchSearch({ fixtures, isPremium }: { fixtures: DemoFixture[]; 
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((f) => (
-            <MatchCard key={f.id} fixture={f} locked={!f.free && !isPremium} />
+            <MatchCard
+              key={f.id}
+              fixture={f}
+              locked={!f.free && !isPremium}
+              userId={userId}
+              saved={savedSet.has(f.id)}
+            />
           ))}
         </div>
       )}

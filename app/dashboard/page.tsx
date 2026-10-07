@@ -3,16 +3,17 @@ import { BottomNav } from "@/components/BottomNav";
 import { MatchSearch } from "@/components/MatchSearch";
 import { Badge } from "@/components/ui/badge";
 import { getTodayFixtures } from "@/lib/fixtures";
+import { getSavedFixtureIds } from "@/lib/saved-picks";
 import { getCurrentUserState, getFreeLimit } from "@/lib/subscription";
 import { Sparkles } from "lucide-react";
 
 export default async function DashboardPage() {
-  const { isPremium, trialEndsAt } = await getCurrentUserState();
+  const { userId, isPremium, trialEndsAt } = await getCurrentUserState();
   const freeLimit = getFreeLimit();
 
   // Vrais matchs synchronisés depuis API-Football (avec repli sur des exemples de démo
   // tant qu'aucune synchronisation n'a encore été effectuée depuis /admin).
-  const fixtures = await getTodayFixtures();
+  const [fixtures, savedFixtureIds] = await Promise.all([getTodayFixtures(), getSavedFixtureIds(userId)]);
 
   return (
     <>
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          <MatchSearch fixtures={fixtures} isPremium={isPremium} />
+          <MatchSearch fixtures={fixtures} isPremium={isPremium} userId={userId} savedFixtureIds={savedFixtureIds} />
         </div>
       </main>
       <BottomNav />

@@ -8,6 +8,9 @@ Implémenté intégralement dans [`supabase/migrations/0001_init.sql`](../supaba
 > `fixtures.h2h_home_win_rate`, `fixtures.h2h_sample_size`, `fixtures.stakes_note`,
 > `predictions.edge_value`, `predictions.market_prob_used`, `predictions.data_gaps` — voir
 > `docs/05-ai-prompt.md` pour le contexte (moteur Dixon-Coles + signaux contextuels).
+>
+> Table ajoutée par [`supabase/migrations/0005_saved_picks.sql`](../supabase/migrations/0005_saved_picks.sql) :
+> `saved_picks` (carnet de pronostics personnel, un utilisateur ne voit/modifie que les siens via RLS).
 
 ## Vue d'ensemble (relations)
 

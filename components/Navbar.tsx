@@ -22,6 +22,7 @@ export async function Navbar() {
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/60">
           <Link href="/dashboard" className="hover:text-white transition-colors">Pronostics</Link>
+          <Link href="/dashboard/carnet" className="hover:text-white transition-colors">Mon carnet</Link>
           <Link href="/dashboard/abonnement" className="hover:text-white transition-colors">Abonnement</Link>
           <Link href="/dashboard/historique" className="hover:text-white transition-colors">Précision IA</Link>
         </nav>
