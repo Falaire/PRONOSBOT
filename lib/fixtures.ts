@@ -46,7 +46,11 @@ export async function getTodayFixtures(): Promise<DemoFixture[]> {
       .gte("kickoff_at", now.toISOString())
       .lte("kickoff_at", in48h.toISOString())
       .order("kickoff_at", { ascending: true })
-      .limit(24);
+      // Plafond large : la synchronisation couvre désormais toutes les compétitions
+      // disponibles (voir app/api/predictions/sync-fixtures/route.ts), pas seulement une
+      // poignée de championnats — la recherche (components/MatchSearch.tsx) permet de
+      // retrouver un match précis dans ce volume plus large.
+      .limit(300);
 
     if (error || !data || data.length === 0) {
       return DEMO_FIXTURES;
