@@ -9,6 +9,7 @@ import { getCurrentUserState } from "@/lib/subscription";
 import { formatDateTimeLome } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { Lock, TrendingUp } from "lucide-react";
+import { BookmakerBetButton } from "@/components/BookmakerBetButton";
 
 export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,6 +80,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   </div>
                 </Card>
               )}
+
+              <Card className="mb-4">
+                <h3 className="font-semibold text-white mb-1">Parier sur ce match</h3>
+                <BookmakerBetButton fixture={fixture} variant="full" />
+              </Card>
 
               <Card className="mb-4">
                 <h3 className="font-semibold text-white mb-2">Autres marchés</h3>

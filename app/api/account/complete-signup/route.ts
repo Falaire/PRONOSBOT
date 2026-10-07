@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { isValidTogoPhone, toE164Togo } from "@/lib/phone";
+import { isValidPhone, toE164Phone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +18,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Numéro de téléphone requis" }, { status: 400 });
   }
 
-  if (!isValidTogoPhone(body.phone)) {
+  if (!isValidPhone(body.phone)) {
     return NextResponse.json(
-      { error: "Numéro invalide. Utilise un numéro togolais à 8 chiffres (ex: 90 12 34 56)." },
+      {
+        error:
+          "Numéro invalide. Utilise un numéro togolais à 8 chiffres (ex: 90 12 34 56) ou un numéro international complet avec l'indicatif de ton pays (ex: +225 01 02 03 04 05).",
+      },
       { status: 400 }
     );
   }
 
-  const phone = toE164Togo(body.phone);
+  const phone = toE164Phone(body.phone);
 
   const supabase = await createClient();
   const {

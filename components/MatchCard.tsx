@@ -5,6 +5,7 @@ import { formatDateTimeLome } from "@/lib/utils";
 import { Lock, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import type { DemoFixture } from "@/lib/demo-data";
+import { BookmakerBetButton } from "@/components/BookmakerBetButton";
 
 export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: boolean }) {
   return (
@@ -71,6 +72,7 @@ export function MatchCard({ fixture, locked }: { fixture: DemoFixture; locked: b
               BTTS {Math.round(fixture.probBtts * 100)}%
             </Badge>
           </div>
+          <BookmakerBetButton fixture={fixture} />
         </>
       )}
 

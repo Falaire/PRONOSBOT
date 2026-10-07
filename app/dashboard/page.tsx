@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
-import { MatchCard } from "@/components/MatchCard";
+import { MatchSearch } from "@/components/MatchSearch";
 import { Badge } from "@/components/ui/badge";
 import { getTodayFixtures } from "@/lib/fixtures";
 import { getCurrentUserState, getFreeLimit } from "@/lib/subscription";
@@ -13,9 +13,6 @@ export default async function DashboardPage() {
   // Vrais matchs synchronisés depuis API-Football (avec repli sur des exemples de démo
   // tant qu'aucune synchronisation n'a encore été effectuée depuis /admin).
   const fixtures = await getTodayFixtures();
-
-  const visibleFree = fixtures.filter((f) => f.free);
-  const visiblePremium = fixtures.filter((f) => !f.free);
 
   return (
     <>
@@ -42,14 +39,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visibleFree.map((f) => (
-              <MatchCard key={f.id} fixture={f} locked={false} />
-            ))}
-            {visiblePremium.map((f) => (
-              <MatchCard key={f.id} fixture={f} locked={!isPremium} />
-            ))}
-          </div>
+          <MatchSearch fixtures={fixtures} isPremium={isPremium} />
         </div>
       </main>
       <BottomNav />

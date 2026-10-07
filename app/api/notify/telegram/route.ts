@@ -44,7 +44,7 @@ async function handler(req: NextRequest) {
 
   const message =
     lines.length > 0
-      ? `🔥 <b>Pronostics du jour — KickPredict Togo</b>\n\n${lines.join("\n\n")}\n\nVoir l'analyse complète : ${
+      ? `🔥 <b>Pronostics du jour — KickPredict</b>\n\n${lines.join("\n\n")}\n\nVoir l'analyse complète : ${
           process.env.NEXT_PUBLIC_SITE_URL
         }/dashboard`
       : "Aucun pronostic à forte confiance pour aujourd'hui.";

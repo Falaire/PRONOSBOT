@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { WhatsAppBubble } from "@/components/WhatsAppBubble";
+import { APP_NAME_FULL } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "KickPredict Togo — Pronostics football IA en FCFA",
+  title: `${APP_NAME_FULL} — Pronostics football IA en FCFA`,
   description:
-    "Pronostics football par intelligence artificielle (Elo + Poisson), adaptés au Togo et à l'UEMOA. Paiement T-Money / Flooz, sans carte bancaire. 18+, service d'analyse statistique.",
+    "Pronostics football par intelligence artificielle (Elo + Poisson), adaptés à l'Afrique de l'Ouest et Centrale. Paiement Mobile Money, sans carte bancaire. 18+, service d'analyse statistique.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
 };
 

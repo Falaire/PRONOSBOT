@@ -15,7 +15,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Est-ce que je peux parier directement sur KickPredict ?",
-    a: "Non. KickPredict est un outil d'analyse et d'aide à la décision — nous ne sommes ni un bookmaker ni un opérateur de jeux d'argent, et nous ne prenons aucun pari. Les paris se placent ensuite chez le bookmaker de ton choix (1xBet ou autre).",
+    a: "Non. KickPredict est un outil d'analyse et d'aide à la décision — nous ne sommes ni un bookmaker ni un opérateur de jeux d'argent, et nous ne prenons aucun pari. Chaque pronostic propose un raccourci vers le bookmaker de ton choix (1xBet, Betwinner, Melbet, SportyBet...) pour y placer ton pari toi-même.",
   },
   {
     q: "Les matchs et les cotes affichés sont-ils réels ?",
@@ -23,7 +23,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment payer mon abonnement ?",
-    a: "100% Mobile Money local : T-Money (Mixx by Yas) ou Flooz (Moov Africa), directement depuis le Togo. Aucune carte bancaire requise.",
+    a: "100% Mobile Money : T-Money (Mixx by Yas) ou Flooz (Moov Africa) pour le Togo, avec d'autres opérateurs Mobile Money africains à venir. Aucune carte bancaire requise.",
   },
   {
     q: "Puis-je annuler à tout moment ?",

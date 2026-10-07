@@ -7,6 +7,7 @@ import { MatchCard } from "@/components/MatchCard";
 import { FAQ } from "@/components/FAQ";
 import { DEMO_FIXTURES } from "@/lib/demo-data";
 import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
+import { APP_NAME, APP_NAME_FULL } from "@/lib/brand";
 import {
   Brain,
   ShieldCheck,
@@ -103,7 +104,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 opacity-40 bg-dot-grid [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
           <div className="relative mx-auto max-w-6xl px-4 pt-16 sm:pt-24 pb-20 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold text-brand-400 mb-6 animate-fade-up">
-              🇹🇬 Conçu pour le Togo et l'UEMOA
+              🌍 Conçu pour l&apos;Afrique de l&apos;Ouest et Centrale
             </span>
             <h1
               className="text-4xl sm:text-6xl font-extrabold leading-[1.08] text-white tracking-tight animate-fade-up"
@@ -270,8 +271,8 @@ export default function LandingPage() {
                 Prêt à parier plus intelligemment ?
               </h2>
               <p className="text-white/60 max-w-xl mx-auto mb-7 text-sm sm:text-base">
-                Rejoins KickPredict et reçois dès aujourd'hui des analyses claires sur les matchs du Togo, de
-                l'Afrique et des grands championnats européens.
+                Rejoins {APP_NAME} et reçois dès aujourd&apos;hui des analyses claires sur les matchs
+                d&apos;Afrique et des grands championnats européens.
               </p>
               <Button href="/inscription" size="lg" className="group">
                 Essai gratuit 3 jours
@@ -284,7 +285,7 @@ export default function LandingPage() {
         {/* DISCLAIMER LEGAL */}
         <section className="mx-auto max-w-4xl px-4 pb-16 text-center">
           <p className="text-xs text-white/35 leading-relaxed">
-            KickPredict Togo est un service d'analyse statistique et d'information sportive (18+). Nous ne sommes
+            {APP_NAME} est un service d&apos;analyse statistique et d&apos;information sportive (18+). Nous ne sommes
             ni un bookmaker ni un opérateur de jeux d'argent : nous ne prenons aucun pari et ne garantissons aucun
             gain. Les pronostics sont fournis à titre indicatif. Jouez de manière responsable.{" "}
             <Link href="/legal/cgu" className="underline hover:text-white/60">CGU</Link> ·{" "}
@@ -294,7 +295,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-white/[0.08] py-8 text-center text-xs text-white/35">
-        © {new Date().getFullYear()} KickPredict Togo — Lomé, Togo
+        © {new Date().getFullYear()} {APP_NAME_FULL} — basé à Lomé, Togo 🇹🇬
       </footer>
     </>
   );

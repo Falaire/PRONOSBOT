@@ -59,7 +59,7 @@ export function SecurityCodeForm() {
           <input
             required
             type={showCode ? "text" : "password"}
-            placeholder="Ex : Togo2024!"
+            placeholder="Ex : Africa2024!"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 pr-10 text-white text-sm placeholder:text-white/30"
@@ -81,7 +81,7 @@ export function SecurityCodeForm() {
         <input
           required
           type={showCode ? "text" : "password"}
-          placeholder="Ex : Togo2024!"
+          placeholder="Ex : Africa2024!"
           value={codeConfirm}
           onChange={(e) => setCodeConfirm(e.target.value)}
           className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"

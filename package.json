@@ -1,8 +1,8 @@
 {
-  "name": "kickpredict-togo",
+  "name": "kickpredict-africa",
   "version": "0.1.0",
   "private": true,
-  "description": "KickPredict Togo — SaaS de pronostics football IA (Elo + Poisson) pour le Togo et l'UEMOA, paiement Mobile Money (T-Money / Flooz)",
+  "description": "KickPredict Africa — SaaS de pronostics football IA (Elo + Poisson) pour l'Afrique de l'Ouest et Centrale, paiement Mobile Money",
   "engines": {
     "node": ">=18.18.0"
   },

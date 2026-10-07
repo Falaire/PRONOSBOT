@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const result = await initPayment({
       transactionId,
       amountFcfa: plan.amount,
-      description: `Abonnement KickPredict Togo — ${plan.label}`,
+      description: `Abonnement KickPredict — ${plan.label}`,
       customerName: user.user_metadata?.full_name ?? "Client KickPredict",
       customerPhone: body.phone,
       customerEmail: user.email,

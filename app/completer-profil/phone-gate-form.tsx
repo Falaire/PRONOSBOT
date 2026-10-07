@@ -114,17 +114,18 @@ export function PhoneGateForm() {
         </div>
         <p className="text-sm text-white/60 mb-5">
           Ton numéro de téléphone active ton essai gratuit de 3 jours et sert aux alertes WhatsApp et
-          au paiement Mobile Money. Un seul essai gratuit par numéro.
+          au paiement Mobile Money. Un seul essai gratuit par numéro. Numéro togolais ou numéro
+          international avec l&apos;indicatif de ton pays.
         </p>
         <form onSubmit={submitPhone} className="space-y-4">
           <div>
             <label className="text-sm text-white/70 flex items-center gap-1">
-              <Phone className="w-4 h-4" /> Numéro de téléphone (Togo)
+              <Phone className="w-4 h-4" /> Numéro de téléphone (WhatsApp)
             </label>
             <input
               required
               type="tel"
-              placeholder="90 12 34 56"
+              placeholder="90 12 34 56 ou +225 01 02 03 04 05"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
@@ -158,7 +159,7 @@ export function PhoneGateForm() {
             <input
               required
               type={showCode ? "text" : "password"}
-              placeholder="Ex : Togo2024!"
+              placeholder="Ex : Africa2024!"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 pr-10 text-white text-sm placeholder:text-white/30"
@@ -182,7 +183,7 @@ export function PhoneGateForm() {
           <input
             required
             type={showCode ? "text" : "password"}
-            placeholder="Ex : Togo2024!"
+            placeholder="Ex : Africa2024!"
             value={codeConfirm}
             onChange={(e) => setCodeConfirm(e.target.value)}
             className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"

@@ -3,6 +3,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import Link from "next/link";
 import { Zap, Sparkles } from "lucide-react";
 import { getCurrentUserState } from "@/lib/subscription";
+import { APP_BADGE } from "@/lib/brand";
 
 export async function Navbar() {
   const { userId, isPremium } = await getCurrentUserState();
@@ -16,7 +17,7 @@ export async function Navbar() {
           </span>
           Kick<span className="text-brand-400">Predict</span>
           <span className="text-accent-500 text-[10px] font-bold border border-accent-500/40 rounded-full px-2 py-0.5 ml-0.5 tracking-wide">
-            TG
+            {APP_BADGE}
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/60">

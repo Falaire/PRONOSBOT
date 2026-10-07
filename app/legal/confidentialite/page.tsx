@@ -16,7 +16,7 @@ export default function ConfidentialitePage() {
             </p>
             <p>
               Nous ne vendons aucune donnée personnelle à des tiers. Les données de paiement transitent directement
-              par l'agrégateur agréé (CinetPay) et l'opérateur Mobile Money ; KickPredict Togo ne stocke jamais de
+              par l'agrégateur agréé (CinetPay) et l'opérateur Mobile Money ; KickPredict ne stocke jamais de
               code secret Mobile Money ni d'identifiants opérateur.
             </p>
             <p>
