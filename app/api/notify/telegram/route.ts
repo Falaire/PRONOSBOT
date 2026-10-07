@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * Cron quotidien (~08h00 Africa/Lome) : envoie le récapitulatif des meilleurs pronostics du
- * jour (confiance >= 65%) au canal Telegram public + aux abonnés Premium ayant renseigné leur
- * telegram_chat_id.
+ * jour (confiance >= 60%) au canal Telegram public + aux abonnés Premium ayant renseigné leur
+ * telegram_chat_id. Seuil volontairement réaliste : en football, peu de matchs dépassent 70-80%
+ * de probabilité même pour un net favori — exiger plus que 60% viderait le message la plupart
+ * des jours (voir lib/utils.ts::confidenceLabel pour la même logique côté affichage).
  */
 async function handler(req: NextRequest) {
   const auth = await assertAdminOrCron(req);
@@ -25,7 +27,7 @@ async function handler(req: NextRequest) {
       `confidence, prob_home, prob_draw, prob_away, predicted_score_home, predicted_score_away,
        fixture:fixtures(kickoff_at, home:teams!fixtures_home_team_id_fkey(name), away:teams!fixtures_away_team_id_fkey(name))`
     )
-    .gte("confidence", 65)
+    .gte("confidence", 60)
     .gte("fixture.kickoff_at", now.toISOString())
     .lte("fixture.kickoff_at", in24h.toISOString())
     .order("confidence", { ascending: false })

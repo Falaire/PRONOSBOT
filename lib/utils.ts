@@ -21,9 +21,15 @@ export function formatDateTimeLome(date: string | Date): string {
   }).format(d);
 }
 
+/**
+ * Seuils volontairement réalistes : en football, un net favori dépasse rarement 75-80% de
+ * probabilité (contrairement à d'autres sports), donc exiger 80%+ pour "forte confiance" laisse
+ * la quasi-totalité des pronostics dans la case basse, même quand le modèle est confiant.
+ * 60%+ est déjà un bon niveau de certitude statistique pour un match de foot.
+ */
 export function confidenceLabel(confidence: number): { label: string; color: string } {
-  if (confidence >= 80) return { label: "Très forte confiance", color: "text-brand-500" };
-  if (confidence >= 65) return { label: "Confiance solide", color: "text-accent-500" };
-  if (confidence >= 50) return { label: "Confiance modérée", color: "text-orange-400" };
-  return { label: "Prudence", color: "text-red-400" };
+  if (confidence >= 75) return { label: "Très forte confiance", color: "text-brand-500" };
+  if (confidence >= 60) return { label: "Bonne confiance", color: "text-accent-500" };
+  if (confidence >= 45) return { label: "Confiance modérée", color: "text-orange-400" };
+  return { label: "Prudence, match imprévisible", color: "text-red-400" };
 }
