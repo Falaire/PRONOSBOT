@@ -1,0 +1,281 @@
+"use client";
+
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { setRememberCookies } from "@/lib/remember-me";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Mail, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+
+/**
+ * Authentification par email + code.
+ *
+ * Deux méthodes pour un compte "connexion" existant :
+ *  - "code" (par défaut, rapide) : email + code de sécurité à 6 chiffres défini lors de
+ *    l'inscription (voir app/completer-profil/phone-gate-form.tsx), via
+ *    supabase.auth.signInWithPassword — aucun email renvoyé.
+ *  - "email" (secours) : lien de connexion envoyé par email (Supabase Auth OTP), utile si le
+ *    code est oublié, ou pour une toute première inscription (pas encore de code défini).
+ */
+export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
+  const [method, setMethod] = useState<"code" | "email">(mode === "connexion" ? "code" : "email");
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [securityCode, setSecurityCode] = useState("");
+  const [showCode, setShowCode] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const supabase = createClient();
+
+  async function signInWithCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password: securityCode });
+    setLoading(false);
+    if (error) {
+      setError(
+        "Email ou code incorrect — ou tu n'as pas encore créé de code de sécurité. Essaie \"Se connecter par email\" ci-dessous."
+      );
+      return;
+    }
+    setRememberCookies(rememberMe);
+    // Rechargement complet pour que tous les composants serveur (Navbar, dashboard...) relisent
+    // un état de connexion frais. /dashboard renvoie lui-même vers /completer-profil si besoin.
+    window.location.href = "/dashboard";
+  }
+
+  async function sendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        // Inscription : crée un compte si l'email est nouveau. Connexion : réservé aux
+        // comptes existants, on ne veut pas créer un compte en douce depuis "Connexion".
+        shouldCreateUser: mode === "inscription",
+        // Sur le plan gratuit Supabase, l'email de connexion ne peut afficher qu'un lien
+        // cliquable (pas de code, ça nécessite un SMTP personnalisé) : on pointe donc ce
+        // lien vers notre propre route qui termine la connexion automatiquement. On transmet
+        // le choix "rester connecté" en paramètre pour que /auth/callback puisse le respecter
+        // même quand le lien est ouvert sur un autre appareil/navigateur.
+        emailRedirectTo: `${window.location.origin}/auth/callback?remember=${rememberMe ? "1" : "0"}`,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      if (mode === "connexion" && /signups not allowed/i.test(error.message)) {
+        setError("Aucun compte trouvé avec cet email. Crée d'abord un compte gratuit ci-dessous.");
+      } else {
+        setError(error.message);
+      }
+      return;
+    }
+    setStep("otp");
+  }
+
+  async function verifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setRememberCookies(rememberMe);
+    // Rechargement complet (pas router.push) pour éviter de servir une version mise en cache
+    // de la page suivante (même précaution que pour l'étape téléphone, voir phone-gate-form.tsx).
+    window.location.href = "/completer-profil";
+  }
+
+  const rememberMeCheckbox = (
+    <label className="flex items-center gap-2 text-sm text-white/60 select-none cursor-pointer">
+      <input
+        type="checkbox"
+        checked={rememberMe}
+        onChange={(e) => setRememberMe(e.target.checked)}
+        className="w-4 h-4 rounded border-white/20 bg-white/5 accent-brand-500"
+      />
+      Rester connecté sur cet appareil
+    </label>
+  );
+
+  // --- Connexion avec email + code de sécurité (méthode rapide, pas d'email renvoyé) ---
+  if (mode === "connexion" && method === "code") {
+    return (
+      <Card className="w-full max-w-sm">
+        <h1 className="text-xl font-bold text-white mb-1">Connexion</h1>
+        <p className="text-sm text-white/60 mb-5">Connecte-toi avec ton email et ton code de sécurité.</p>
+        <form onSubmit={signInWithCode} className="space-y-4">
+          <div>
+            <label className="text-sm text-white/70 flex items-center gap-1">
+              <Mail className="w-4 h-4" /> Adresse email
+            </label>
+            <input
+              required
+              type="email"
+              placeholder="toi@exemple.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-white/70 flex items-center gap-1">
+              <KeyRound className="w-4 h-4" /> Code de sécurité
+            </label>
+            <div className="relative mt-1">
+              <input
+                required
+                type={showCode ? "text" : "password"}
+                placeholder="Ton code de sécurité"
+                value={securityCode}
+                onChange={(e) => setSecurityCode(e.target.value)}
+                className="w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 pr-10 text-white text-sm placeholder:text-white/30"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCode((v) => !v)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                tabIndex={-1}
+              >
+                {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          {rememberMeCheckbox}
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Connexion..." : "Se connecter"}
+          </Button>
+          <div className="text-sm text-white/50 text-center space-y-1.5">
+            <p>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setMethod("email");
+                }}
+                className="text-brand-400 font-semibold hover:underline"
+              >
+                Se connecter par email à la place
+              </button>
+            </p>
+            <p>
+              Pas encore de compte ?{" "}
+              <Link href="/inscription" className="text-brand-400 font-semibold hover:underline">
+                Essai gratuit 3 jours
+              </Link>
+            </p>
+          </div>
+        </form>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full max-w-sm">
+      <h1 className="text-xl font-bold text-white mb-1">
+        {mode === "inscription" ? "Créer un compte" : "Connexion par email"}
+      </h1>
+      <p className="text-sm text-white/60 mb-5">
+        {mode === "inscription"
+          ? "3 jours d'essai gratuit, sans carte bancaire."
+          : "Reçois un lien de connexion par email (utile si tu as oublié ton code)."}
+      </p>
+
+      {step === "email" ? (
+        <form onSubmit={sendOtp} className="space-y-4">
+          <div>
+            <label className="text-sm text-white/70 flex items-center gap-1">
+              <Mail className="w-4 h-4" /> Adresse email
+            </label>
+            <input
+              required
+              type="email"
+              placeholder="toi@exemple.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
+            />
+          </div>
+          {rememberMeCheckbox}
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Envoi..." : "Recevoir le code par email"}
+          </Button>
+          <p className="text-sm text-white/50 text-center">
+            {mode === "inscription" ? (
+              <>
+                Déjà un compte ?{" "}
+                <Link href="/connexion" className="text-brand-400 font-semibold hover:underline">
+                  Connecte-toi
+                </Link>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setMethod("code");
+                }}
+                className="text-brand-400 font-semibold hover:underline"
+              >
+                ← Se connecter avec mon code de sécurité
+              </button>
+            )}
+          </p>
+        </form>
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-accent-500/30 bg-accent-500/10 px-3 py-3 text-sm text-white/80">
+            <p className="font-semibold text-white mb-1">Vérifie ta boîte email 📩</p>
+            <p>
+              On vient d&apos;envoyer un email à <span className="text-white">{email}</span>. Ouvre-le et clique
+              sur le bouton <span className="font-semibold">« Sign in »</span> qu&apos;il contient : tu seras
+              connecté automatiquement, sans rien taper.
+            </p>
+          </div>
+          <p className="text-xs text-white/40">
+            Vérifie aussi tes spams si le message n&apos;arrive pas au bout de 2 minutes.
+          </p>
+
+          <details className="text-xs text-white/50">
+            <summary className="cursor-pointer select-none text-white/60 hover:text-white/80">
+              Tu as reçu un code à la place d&apos;un lien ?
+            </summary>
+            <form onSubmit={verifyOtp} className="space-y-3 mt-3">
+              <div>
+                <label className="text-sm text-white/70 flex items-center gap-1">
+                  <ShieldCheck className="w-4 h-4" /> Code reçu par email
+                </label>
+                <input
+                  inputMode="numeric"
+                  placeholder="123456"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30 tracking-widest"
+                />
+              </div>
+              <Button type="submit" disabled={loading || !code} className="w-full">
+                {loading ? "Vérification..." : "Confirmer le code"}
+              </Button>
+            </form>
+          </details>
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
+        </div>
+      )}
+    </Card>
+  );
+}
