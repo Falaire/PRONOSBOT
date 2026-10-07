@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MARKET_OPTIONS: { value: string; label: string }[] = [
@@ -13,6 +13,24 @@ const MARKET_OPTIONS: { value: string; label: string }[] = [
   { value: "over25", label: "Plus de 2,5 buts" },
   { value: "btts_yes", label: "Les deux équipes marquent" },
 ];
+
+/**
+ * Traduit une erreur Supabase/Postgres en message compréhensible. Important : avant cette
+ * fonction, les erreurs d'écriture (ex: table saved_picks pas encore créée si la migration
+ * 0005_saved_picks.sql n'a pas été exécutée sur le projet) étaient silencieusement ignorées et
+ * l'interface affichait quand même "enregistré" — c'était le bug remonté par l'utilisateur
+ * (match ajouté au carnet mais introuvable ensuite, car jamais vraiment écrit en base).
+ */
+function friendlyError(error: { code?: string; message?: string } | null): string | null {
+  if (!error) return null;
+  if (error.code === "42P01") {
+    return "Le carnet n'est pas encore activé sur ce site (migration base de données manquante) — contacte l'administrateur.";
+  }
+  if (error.code === "42501" || /row-level security/i.test(error.message ?? "")) {
+    return "Connecte-toi à nouveau pour enregistrer ce match.";
+  }
+  return "Impossible d'enregistrer pour le moment. Réessaie dans un instant.";
+}
 
 /**
  * Bouton "carnet" : permet d'enregistrer un match dans le carnet personnel de l'utilisateur
@@ -41,6 +59,7 @@ export function SavePickButton({
   const [market, setMarket] = useState(initialMarket ?? "");
   const [note, setNote] = useState(initialNote ?? "");
   const [justSaved, setJustSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function quickToggle() {
     if (!userId) {
@@ -49,17 +68,32 @@ export function SavePickButton({
     }
     const supabase = createClient();
     setLoading(true);
+    setError(null);
     try {
       if (saved) {
-        await supabase.from("saved_picks").delete().eq("user_id", userId).eq("fixture_id", fixtureId);
+        const { error: delError } = await supabase
+          .from("saved_picks")
+          .delete()
+          .eq("user_id", userId)
+          .eq("fixture_id", fixtureId);
+        if (delError) {
+          console.error("saved_picks delete", delError);
+          setError(friendlyError(delError));
+          return; // on ne change pas l'état affiché si l'écriture a échoué
+        }
         setSaved(false);
       } else {
-        await supabase
+        const { error: upsertError } = await supabase
           .from("saved_picks")
           .upsert(
             { user_id: userId, fixture_id: fixtureId, chosen_market: market || null, note: note || null },
             { onConflict: "user_id,fixture_id" }
           );
+        if (upsertError) {
+          console.error("saved_picks upsert", upsertError);
+          setError(friendlyError(upsertError));
+          return;
+        }
         setSaved(true);
       }
     } finally {
@@ -74,8 +108,9 @@ export function SavePickButton({
     }
     const supabase = createClient();
     setLoading(true);
+    setError(null);
     try {
-      await supabase
+      const { error: upsertError } = await supabase
         .from("saved_picks")
         .upsert(
           {
@@ -87,6 +122,11 @@ export function SavePickButton({
           },
           { onConflict: "user_id,fixture_id" }
         );
+      if (upsertError) {
+        console.error("saved_picks upsert (full)", upsertError);
+        setError(friendlyError(upsertError));
+        return;
+      }
       setSaved(true);
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
@@ -97,27 +137,34 @@ export function SavePickButton({
 
   if (variant === "compact") {
     return (
-      <button
-        type="button"
-        onClick={quickToggle}
-        disabled={loading}
-        title={saved ? "Retirer du carnet" : "Ajouter à mon carnet"}
-        className={cn(
-          "flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors shrink-0",
-          saved
-            ? "border-brand-500/40 bg-brand-500/10 text-brand-400"
-            : "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.08]"
+      <div className="flex flex-col items-end gap-1">
+        <button
+          type="button"
+          onClick={quickToggle}
+          disabled={loading}
+          title={saved ? "Retirer du carnet" : "Ajouter à mon carnet"}
+          className={cn(
+            "flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition-colors shrink-0",
+            saved
+              ? "border-brand-500/40 bg-brand-500/10 text-brand-400"
+              : "border-white/10 bg-white/[0.03] text-white/60 hover:bg-white/[0.08]"
+          )}
+        >
+          {loading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : saved ? (
+            <BookmarkCheck className="w-3.5 h-3.5" />
+          ) : (
+            <Bookmark className="w-3.5 h-3.5" />
+          )}
+          {saved ? "Dans mon carnet" : "Carnet"}
+        </button>
+        {error && (
+          <p className="flex items-center gap-1 text-[10px] text-red-400 max-w-[180px] text-right">
+            <AlertTriangle className="w-3 h-3 shrink-0" /> {error}
+          </p>
         )}
-      >
-        {loading ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : saved ? (
-          <BookmarkCheck className="w-3.5 h-3.5" />
-        ) : (
-          <Bookmark className="w-3.5 h-3.5" />
-        )}
-        {saved ? "Dans mon carnet" : "Carnet"}
-      </button>
+      </div>
     );
   }
 
@@ -159,6 +206,11 @@ export function SavePickButton({
           >
             {loading ? "Enregistrement..." : justSaved ? "✓ Enregistré" : "Enregistrer dans mon carnet"}
           </button>
+          {error && (
+            <p className="flex items-center gap-1.5 text-xs text-red-400">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {error}
+            </p>
+          )}
         </div>
       )}
     </div>

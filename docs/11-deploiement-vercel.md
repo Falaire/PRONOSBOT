@@ -91,9 +91,12 @@ Une fois déployé, teste dans l'ordre :
 
 ## 11.6 Étapes suivantes une fois déployé
 
-1. **Exécuter les migrations Supabase** (`supabase/migrations/0001_init.sql` puis
-   `0002_email_auth.sql`, dans le SQL Editor, dans cet ordre) — sans ça, inscription/abonnement
-   restent en mode démo (aucune donnée persistée).
+1. **Exécuter les migrations Supabase** (`supabase/migrations/0001_init.sql`, puis
+   `0002_email_auth.sql`, `0003_phone_trial_gate.sql`, `0004_prediction_context.sql`,
+   `0005_saved_picks.sql`, dans le SQL Editor, dans cet ordre) — sans ça, inscription/abonnement
+   restent en mode démo (aucune donnée persistée). Si tu as déjà exécuté 0001-0003 avant et que
+   le carnet de pronostics ou les cotes Over/Under/BTTS ne fonctionnent pas, c'est que `0004` et
+   `0005` manquent encore sur ton projet — exécute-les maintenant (idempotentes, sans danger).
 2. (Optionnel, quand le volume grandit) **Brancher un SMTP dédié** (Resend, doc 10) pour ne plus
    dépendre du service d'email gratuit limité en débit de Supabase.
 3. **T'inscrire une première fois** sur le site déployé (avec ton email), puis te passer admin

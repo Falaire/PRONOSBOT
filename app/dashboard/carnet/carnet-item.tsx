@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookmakerBetButton } from "@/components/BookmakerBetButton";
 import { formatDateTimeLome } from "@/lib/utils";
-import { Trash2, Check, X as XIcon } from "lucide-react";
+import { Trash2, Check, X as XIcon, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import type { SavedPick } from "@/lib/saved-picks";
 
@@ -31,12 +31,19 @@ export function CarnetItem({ pick }: { pick: SavedPick }) {
   const [removed, setRemoved] = useState(false);
   const [editingNote, setEditingNote] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function remove() {
     const supabase = createClient();
     setLoading(true);
+    setError(null);
     try {
-      await supabase.from("saved_picks").delete().eq("id", pick.id);
+      const { error: delError } = await supabase.from("saved_picks").delete().eq("id", pick.id);
+      if (delError) {
+        console.error("saved_picks delete", delError);
+        setError("Impossible de retirer ce match pour le moment. Réessaie.");
+        return;
+      }
       setRemoved(true);
     } finally {
       setLoading(false);
@@ -46,8 +53,17 @@ export function CarnetItem({ pick }: { pick: SavedPick }) {
   async function saveNote() {
     const supabase = createClient();
     setLoading(true);
+    setError(null);
     try {
-      await supabase.from("saved_picks").update({ note, updated_at: new Date().toISOString() }).eq("id", pick.id);
+      const { error: updError } = await supabase
+        .from("saved_picks")
+        .update({ note, updated_at: new Date().toISOString() })
+        .eq("id", pick.id);
+      if (updError) {
+        console.error("saved_picks update note", updError);
+        setError("Impossible d'enregistrer la note pour le moment.");
+        return;
+      }
       setEditingNote(false);
     } finally {
       setLoading(false);
@@ -56,8 +72,17 @@ export function CarnetItem({ pick }: { pick: SavedPick }) {
 
   async function changeStatus(next: SavedPick["status"]) {
     const supabase = createClient();
+    const previous = status;
     setStatus(next);
-    await supabase.from("saved_picks").update({ status: next, updated_at: new Date().toISOString() }).eq("id", pick.id);
+    const { error: statusError } = await supabase
+      .from("saved_picks")
+      .update({ status: next, updated_at: new Date().toISOString() })
+      .eq("id", pick.id);
+    if (statusError) {
+      console.error("saved_picks update status", statusError);
+      setStatus(previous); // on annule le changement optimiste si l'écriture a échoué
+      setError("Impossible de mettre à jour le statut pour le moment.");
+    }
   }
 
   if (removed) return null;
@@ -160,6 +185,12 @@ export function CarnetItem({ pick }: { pick: SavedPick }) {
         <div className="pt-1 border-t border-white/[0.06]">
           <BookmakerBetButton fixture={betSlipFixture} variant="full" />
         </div>
+      )}
+
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-red-400">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {error}
+        </p>
       )}
 
       <Link href={`/dashboard/match/${pick.fixtureId}`} className="text-xs text-brand-400 font-semibold hover:underline">

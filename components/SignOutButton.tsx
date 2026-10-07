@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { clearRememberCookies } from "@/lib/remember-me";
 import { Button } from "@/components/ui/button";
 
 export function SignOutButton({ className }: { className?: string }) {
@@ -11,6 +12,7 @@ export function SignOutButton({ className }: { className?: string }) {
     setLoading(true);
     const supabase = createClient();
     await supabase.auth.signOut();
+    clearRememberCookies();
     // Rechargement complet pour garantir que tous les composants serveur (Navbar, etc.)
     // relisent un état "déconnecté" frais, au lieu de rester sur une version mise en cache.
     window.location.href = "/";

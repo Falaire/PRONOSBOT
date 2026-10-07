@@ -30,19 +30,26 @@ fictives dans `lib/demo-data.ts`) pour visualiser tout le produit immédiatement
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com)
 2. Dans **SQL Editor**, exécute dans l'ordre le contenu de `supabase/migrations/0001_init.sql`,
-   puis `0002_email_auth.sql`, puis `0003_phone_trial_gate.sql`
+   puis `0002_email_auth.sql`, puis `0003_phone_trial_gate.sql`, puis `0004_prediction_context.sql`,
+   puis `0005_saved_picks.sql`
    - ⚠️ Erreur `relation "profiles" already exists` ? Ton projet a probablement déjà une table
      `profiles` créée par le script de démarrage par défaut de Supabase. Exécute d'abord
      `supabase/migrations/0000_reset_before_install.sql` (sans danger sur un projet neuf), puis
-     relance les migrations `0001` → `0003` dans l'ordre.
+     relance les migrations `0001` → `0005` dans l'ordre.
+   - ⚠️ Si tu as déjà déployé le site avant l'ajout de `0004`/`0005` (ex: le carnet de pronostics
+     ou les cotes Over/Under n'apparaissent pas), c'est très probablement parce que ces deux
+     migrations n'ont pas encore été exécutées sur ton projet — vas dans Supabase → SQL Editor et
+     lance-les maintenant, rien à craindre, elles sont idempotentes (`if not exists` partout).
 3. Renseigne `.env.local` (Supabase, CinetPay, API-Football, Telegram — voir `.env.example`)
 4. `node --env-file=.env.local scripts/seed.mjs` → importe les ligues + équipes de départ
 5. Déploie sur [Vercel](https://vercel.com) (Hobby gratuit) — `vercel.json` configure déjà les
-   3 tâches planifiées (crons, fuseau UTC = heure de Lomé) :
+   4 tâches planifiées (crons, fuseau UTC = heure de Lomé) :
    - `06h00` — synchronisation des matchs du jour (API-Football)
-   - `06h30` — génération des pronostics (moteur Elo + Poisson)
+   - `06h15` — mise à jour des ratings des équipes (résultats de la veille)
+   - `06h30` — génération des pronostics (moteur Dixon-Coles)
    - `08h00` — envoi des alertes Telegram
 6. Passe ton compte en admin dans Supabase → SQL Editor :
+
    ```sql
    update profiles set role = 'admin' where id = 'TON_USER_ID';
    ```

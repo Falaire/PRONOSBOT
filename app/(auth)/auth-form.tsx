@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { setRememberCookies } from "@/lib/remember-me";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
@@ -24,6 +25,7 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
   const [code, setCode] = useState("");
   const [securityCode, setSecurityCode] = useState("");
   const [showCode, setShowCode] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -40,6 +42,7 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
       );
       return;
     }
+    setRememberCookies(rememberMe);
     // Rechargement complet pour que tous les composants serveur (Navbar, dashboard...) relisent
     // un état de connexion frais. /dashboard renvoie lui-même vers /completer-profil si besoin.
     window.location.href = "/dashboard";
@@ -57,8 +60,10 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
         shouldCreateUser: mode === "inscription",
         // Sur le plan gratuit Supabase, l'email de connexion ne peut afficher qu'un lien
         // cliquable (pas de code, ça nécessite un SMTP personnalisé) : on pointe donc ce
-        // lien vers notre propre route qui termine la connexion automatiquement.
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // lien vers notre propre route qui termine la connexion automatiquement. On transmet
+        // le choix "rester connecté" en paramètre pour que /auth/callback puisse le respecter
+        // même quand le lien est ouvert sur un autre appareil/navigateur.
+        emailRedirectTo: `${window.location.origin}/auth/callback?remember=${rememberMe ? "1" : "0"}`,
       },
     });
     setLoading(false);
@@ -87,10 +92,23 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
       setError(error.message);
       return;
     }
+    setRememberCookies(rememberMe);
     // Rechargement complet (pas router.push) pour éviter de servir une version mise en cache
     // de la page suivante (même précaution que pour l'étape téléphone, voir phone-gate-form.tsx).
     window.location.href = "/completer-profil";
   }
+
+  const rememberMeCheckbox = (
+    <label className="flex items-center gap-2 text-sm text-white/60 select-none cursor-pointer">
+      <input
+        type="checkbox"
+        checked={rememberMe}
+        onChange={(e) => setRememberMe(e.target.checked)}
+        className="w-4 h-4 rounded border-white/20 bg-white/5 accent-brand-500"
+      />
+      Rester connecté sur cet appareil
+    </label>
+  );
 
   // --- Connexion avec email + code de sécurité (méthode rapide, pas d'email renvoyé) ---
   if (mode === "connexion" && method === "code") {
@@ -135,6 +153,7 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
               </button>
             </div>
           </div>
+          {rememberMeCheckbox}
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Connexion..." : "Se connecter"}
@@ -190,6 +209,7 @@ export function AuthForm({ mode }: { mode: "connexion" | "inscription" }) {
               className="mt-1 w-full rounded-lg bg-white/5 border border-white/15 px-3 py-2 text-white text-sm placeholder:text-white/30"
             />
           </div>
+          {rememberMeCheckbox}
           {error && <p className="text-sm text-red-400">{error}</p>}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Envoi..." : "Recevoir le code par email"}
