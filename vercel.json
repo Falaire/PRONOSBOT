@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/predictions/sync-fixtures", "schedule": "0 6 * * *" },
+    { "path": "/api/predictions/update-ratings", "schedule": "15 6 * * *" },
     { "path": "/api/predictions/generate", "schedule": "30 6 * * *" },
     { "path": "/api/notify/telegram", "schedule": "0 8 * * *" }
   ]

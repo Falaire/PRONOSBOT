@@ -25,6 +25,14 @@ export type DemoFixture = {
   free: boolean;
   /** Cotes réelles du marché (issues d'un bookmaker comme 1xBet) quand elles sont disponibles. */
   odds?: { home: number; draw: number; away: number };
+  /** Marché sur lequel une "value" a été détectée ('1'|'X'|'2'|'over25'|'btts_yes'), si isValueBet. */
+  valueBetMarket?: string;
+  /** Écart (proba modèle - proba marché) pour le marché de la value détectée, ex: 0.08 = +8 points. */
+  edgeValue?: number;
+  /** Proba marché utilisée pour calculer l'écart (dé-margée pour le 1X2, brute pour O/U et BTTS). */
+  marketProbUsed?: number;
+  /** Manques de données identifiés pour ce match (H2H, blessures, calendrier...), pour transparence. */
+  dataGaps?: string[];
 };
 
 export const DEMO_FIXTURES: DemoFixture[] = [

@@ -34,6 +34,14 @@ export function AdminActions() {
           size="sm"
           variant="secondary"
           disabled={loading !== null}
+          onClick={() => run("Mettre à jour les ratings", "/api/predictions/update-ratings")}
+        >
+          Mettre à jour les ratings (matchs terminés)
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={loading !== null}
           onClick={() => run("Générer pronostics", "/api/predictions/generate")}
         >
           Générer les pronostics

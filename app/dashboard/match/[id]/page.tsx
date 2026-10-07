@@ -11,6 +11,23 @@ import { notFound } from "next/navigation";
 import { Lock, TrendingUp } from "lucide-react";
 import { BookmakerBetButton } from "@/components/BookmakerBetButton";
 
+function marketLabel(market?: string): string {
+  switch (market) {
+    case "1":
+      return "victoire domicile";
+    case "X":
+      return "match nul";
+    case "2":
+      return "victoire extérieur";
+    case "over25":
+      return "plus de 2,5 buts";
+    case "btts_yes":
+      return "les deux équipes marquent";
+    default:
+      return "marché";
+  }
+}
+
 export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const fixture = await getFixtureById(id);
@@ -107,11 +124,15 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               {fixture.isValueBet && (
                 <Card className="mb-4 border-accent-500/40 bg-accent-500/5">
                   <div className="flex items-center gap-2 text-accent-500 font-semibold mb-1">
-                    <TrendingUp className="w-4 h-4" /> Value bet détecté
+                    <TrendingUp className="w-4 h-4" /> Value bet détecté ({marketLabel(fixture.valueBetMarket)})
                   </div>
                   <p className="text-sm text-white/70">
-                    La probabilité estimée par l'IA est nettement supérieure à la probabilité implicite des cotes du
-                    marché sur ce match : c'est un potentiel "value bet".
+                    La probabilité estimée par le modèle est supérieure à la probabilité du marché
+                    {fixture.valueBetMarket === "1" || fixture.valueBetMarket === "X" || fixture.valueBetMarket === "2"
+                      ? " (marge du bookmaker retirée)"
+                      : " (cote brute, marge non retirée sur ce marché)"}
+                    {typeof fixture.edgeValue === "number" ? ` : écart de +${Math.round(fixture.edgeValue * 100)} points` : ""}
+                    {typeof fixture.marketProbUsed === "number" ? ` (marché estimé à ${Math.round(fixture.marketProbUsed * 100)}%)` : ""}.
                   </p>
                 </Card>
               )}
@@ -119,6 +140,16 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <Card>
                 <h3 className="font-semibold text-white mb-2">Pourquoi l'IA a choisi ce résultat ?</h3>
                 <p className="text-sm text-white/70 leading-relaxed">{fixture.explanation}</p>
+                {fixture.dataGaps && fixture.dataGaps.length > 0 && (
+                  <p className="text-xs text-amber-400/80 mt-3">
+                    ⚠ Données non confirmées pour ce match : {fixture.dataGaps.join(", ")}. Le modèle ne les invente pas, il
+                    s'appuie sur les autres signaux disponibles.
+                  </p>
+                )}
+                <p className="text-xs text-white/40 mt-3">
+                  Aucune prédiction n'est garantie : ces probabilités sont des estimations statistiques, pas une promesse
+                  de résultat.
+                </p>
               </Card>
             </>
           )}

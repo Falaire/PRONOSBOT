@@ -1,12 +1,23 @@
 # 5. Prompt système de l'agent IA de prédiction
 
+> **Mise à jour modèle (v1.1)** : le moteur utilise désormais une correction **Dixon-Coles** sur
+> les scores faibles (0-0, 1-0, 0-1, 1-1) en plus du double Poisson, des ratings attaque/défense/
+> Elo/forme **mis à jour en continu après chaque match terminé** (décroissance temporelle EWMA,
+> voir `lib/prediction/ratings.ts` et `app/api/predictions/update-ratings/route.ts` — avant cette
+> mise à jour, ces ratings restaient figés à leur valeur par défaut), un ajustement de fatigue
+> (matchs rapprochés), un ajustement H2H volontairement faible, et une "value" calculée sur la
+> probabilité de marché **dé-margée** (marge du bookmaker retirée) pour le 1X2. Voir
+> `lib/prediction/engine.ts` pour l'implémentation et ses limites documentées en commentaires
+> (pas de vrai fit MLE multi-saisons du rho Dixon-Coles, pas de xG faute d'API publique fiable,
+> pas de météo/composition probable faute de source de données).
+
 ## 5.1 Architecture de l'agent
 
 Pour rester fiable et peu coûteux, l'agent IA de KickPredict Togo est **hybride** :
 
-1. **Couche calcul (déterministe, gratuite)** : le moteur Elo + Poisson (`lib/prediction/engine.ts`)
+1. **Couche calcul (déterministe, gratuite)** : le moteur Dixon-Coles (`lib/prediction/engine.ts`)
    calcule les probabilités, le score probable et un premier brouillon d'explication à partir de
-   données structurées (Elo, forme, attaque/défense, cotes).
+   données structurées (Elo, forme, attaque/défense, fatigue, H2H, cotes).
 2. **Couche langage naturel (LLM, optionnelle)** : un modèle de langage (OpenAI, Claude, ou
    équivalent open-source) reformule/enrichit l'explication en français simple, **sans jamais
    recalculer ni contredire les chiffres** produits par la couche 1. Le LLM reçoit les chiffres en

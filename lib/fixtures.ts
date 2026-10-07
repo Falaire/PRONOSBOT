@@ -38,7 +38,11 @@ export async function getTodayFixtures(): Promise<DemoFixture[]> {
           predicted_score_home,
           predicted_score_away,
           explanation_text,
-          is_value_bet
+          is_value_bet,
+          value_bet_market,
+          edge_value,
+          market_prob_used,
+          data_gaps
         )
       `
       )
@@ -94,6 +98,13 @@ export async function getTodayFixtures(): Promise<DemoFixture[]> {
         scoreAway: Number(prediction?.predicted_score_away ?? 1),
         explanation: prediction?.explanation_text ?? "Analyse en cours.",
         isValueBet: !!prediction?.is_value_bet,
+        valueBetMarket: prediction?.value_bet_market ?? undefined,
+        edgeValue: prediction?.edge_value !== null && prediction?.edge_value !== undefined ? Number(prediction.edge_value) : undefined,
+        marketProbUsed:
+          prediction?.market_prob_used !== null && prediction?.market_prob_used !== undefined
+            ? Number(prediction.market_prob_used)
+            : undefined,
+        dataGaps: prediction?.data_gaps ? String(prediction.data_gaps).split(" | ") : undefined,
         // Cotes réelles issues des bookmakers (1xBet en priorité) quand disponibles.
         odds:
           row.odds_home && row.odds_draw && row.odds_away

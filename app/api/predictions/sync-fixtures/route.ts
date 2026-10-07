@@ -43,24 +43,29 @@ const EXCLUDED_LEAGUE_PATTERN = /\b(u1[5-9]|u2[0-3]|youth|reserve|réserve)\b/i;
 const MAX_FIXTURES = Number(process.env.API_FOOTBALL_MAX_FIXTURES ?? 500);
 
 /**
- * Nombre maximum de matchs pour lesquels on va chercher les cotes réelles (1 appel API par
- * match). Les cotes sont secondaires à l'affichage (le champ `odds` est optionnel côté UI) donc
- * on les limite pour rester dans le quota de la clé API-Football utilisée (le plan gratuit ne
- * donne que 100 appels/jour au total, tous endpoints confondus). Augmente
- * API_FOOTBALL_MAX_ODDS si ton plan le permet.
+ * Nombre maximum de matchs enrichis en détail (1 appel /odds + 1 appel /fixtures/headtohead +
+ * 1 appel /injuries PAR MATCH, donc 3 appels), parmi les plus proches. Le plan API-Football
+ * gratuit ne donne que 100 requêtes/jour tous endpoints confondus — avec 3 appels "fixtures"
+ * (hier/aujourd'hui/demain) + jusqu'à ~15 appels /standings (1 par ligue concernée) + 3×N pour
+ * l'enrichissement, on reste dans ce budget avec N=20 par défaut. Augmente
+ * API_FOOTBALL_MAX_ENRICHED si ton plan le permet (plus de requêtes/jour).
  */
-const MAX_ODDS_FIXTURES = Number(process.env.API_FOOTBALL_MAX_ODDS ?? 30);
+const MAX_ENRICHED_FIXTURES = Number(process.env.API_FOOTBALL_MAX_ENRICHED ?? 20);
 
 type RawFixture = any;
 
 /**
  * Cron quotidien (~06h00 Africa/Lome) : récupère TOUS les matchs programmés sur les prochaines
- * 48h, toutes compétitions confondues (~1200 ligues/coupes couvertes par API-Football — le même
+ * 48h (plus hier, pour capter les scores finaux des matchs qui viennent de se terminer),
+ * toutes compétitions confondues (~1200 ligues/coupes couvertes par API-Football — le même
  * univers de matchs que l'on retrouve chez les bookmakers africains comme 1xBet, Betwinner,
- * SportyBet...), au lieu de se limiter à une liste figée de championnats. Récupère ensuite les
- * cotes réelles (1xBet en priorité) pour les matchs les plus proches, et upsert les lignes
- * leagues/teams/fixtures correspondantes en base — en traitant les écritures PAR LOTS (pas une
- * requête base par match) pour rester rapide même avec plusieurs centaines de matchs.
+ * SportyBet...), au lieu de se limiter à une liste figée de championnats.
+ *
+ * Pour les matchs les plus proches (plafonnés par MAX_ENRICHED_FIXTURES), on va aussi chercher :
+ * cotes réelles 1X2 + Over/Under 2.5 + BTTS (1xBet en priorité), confrontations directes (H2H,
+ * pondérées faiblement dans le modèle), blessures/absences connues, et l'enjeu du match via le
+ * classement de sa ligue. Tout ça est écrit en base PAR LOTS (pas une requête par match) pour
+ * rester rapide même avec plusieurs centaines de matchs.
  *
  * Nécessite la env var API_FOOTBALL_KEY. Si absente, renvoie une erreur explicite plutôt
  * que de planter silencieusement (utile en environnement de démo sans clé payante).
@@ -80,12 +85,13 @@ async function handler(req: NextRequest) {
   const supabase = createAdminClient();
   const errors: string[] = [];
 
-  // 1. Récupère TOUS les matchs (toutes ligues) pour aujourd'hui et demain — une seule requête
-  //    API par jour suffit (pas de boucle par ligue), ce qui reste économe en quota même sur le
-  //    plan gratuit API-Football (100 requêtes/jour).
+  // 1. Récupère TOUS les matchs (toutes ligues) pour hier, aujourd'hui et demain — hier sert
+  //    uniquement à capter les scores finaux des matchs qui se sont terminés tard (pour le
+  //    pipeline de mise à jour des ratings, voir update-ratings). 3 requêtes API au total.
   const today = new Date();
+  const yesterday = new Date(today.getTime() - 24 * 3600 * 1000);
   const tomorrow = new Date(today.getTime() + 24 * 3600 * 1000);
-  const dates = [today, tomorrow].map((d) => d.toISOString().slice(0, 10));
+  const dates = [yesterday, today, tomorrow].map((d) => d.toISOString().slice(0, 10));
 
   const allRaw: RawFixture[] = [];
   for (const date of dates) {
@@ -105,18 +111,16 @@ async function handler(req: NextRequest) {
     }
   }
 
-  // 2. Filtre le bruit académie/réserve, garde uniquement les matchs pas encore joués, trie par
-  //    coup d'envoi le plus proche, et plafonne à MAX_FIXTURES pour rester raisonnable.
-  const now = Date.now();
+  // 2. Filtre le bruit académie/réserve, trie par coup d'envoi le plus proche (les matchs d'hier
+  //    déjà terminés remontent naturellement en tête grâce à ce tri), plafonne à MAX_FIXTURES.
   const filtered: RawFixture[] = allRaw
     .filter((item) => !EXCLUDED_LEAGUE_PATTERN.test(item.league?.name ?? ""))
-    .filter((item) => new Date(item.fixture?.date).getTime() >= now - 3 * 3600 * 1000)
     .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime())
     .slice(0, MAX_FIXTURES);
 
   let fixturesUpserted = 0;
-  let oddsUpserted = 0;
   const fixtureIdByExternal = new Map<string, string>();
+  const leagueIdByExternal = new Map<string, string>();
 
   try {
     // 3. Upsert PAR LOT des ligues distinctes (une seule requête base, peu importe le nombre de matchs).
@@ -132,7 +136,6 @@ async function handler(req: NextRequest) {
       priority_order: PRIORITY_LEAGUES[league.name?.toLowerCase()] ?? 100,
       active: true,
     }));
-    const leagueIdByExternal = new Map<string, string>();
     if (leaguesPayload.length > 0) {
       const { data: leagueRows, error } = await supabase
         .from("leagues")
@@ -145,8 +148,10 @@ async function handler(req: NextRequest) {
     // 4. Upsert PAR LOT des équipes distinctes (domicile + extérieur de tous les matchs retenus).
     const teamByExternal = new Map<string, { team: any; leagueExternalId: string }>();
     for (const item of filtered) {
-      if (item.teams?.home?.id) teamByExternal.set(String(item.teams.home.id), { team: item.teams.home, leagueExternalId: String(item.league.id) });
-      if (item.teams?.away?.id) teamByExternal.set(String(item.teams.away.id), { team: item.teams.away, leagueExternalId: String(item.league.id) });
+      if (item.teams?.home?.id)
+        teamByExternal.set(String(item.teams.home.id), { team: item.teams.home, leagueExternalId: String(item.league.id) });
+      if (item.teams?.away?.id)
+        teamByExternal.set(String(item.teams.away.id), { team: item.teams.away, leagueExternalId: String(item.league.id) });
     }
     const teamsPayload = Array.from(teamByExternal.entries()).map(([externalId, { team, leagueExternalId }]) => ({
       external_api_id: externalId,
@@ -197,34 +202,134 @@ async function handler(req: NextRequest) {
     errors.push(e.message ?? String(e));
   }
 
-  // 6. Cotes réelles (1xBet en priorité) pour les matchs les plus proches uniquement (1 appel API
-  //    par match, plafonné par MAX_ODDS_FIXTURES) — le reste des matchs reste affiché sans cote
-  //    de référence (champ `odds` optionnel côté UI, voir lib/demo-data.ts / MatchCard.tsx).
-  const nearestExternalIds = filtered
-    .map((item) => String(item.fixture.id))
-    .filter((id) => fixtureIdByExternal.has(id))
-    .slice(0, MAX_ODDS_FIXTURES);
+  // 6. Enrichissement détaillé (cotes 1X2 + O/U2.5 + BTTS, H2H, blessures, enjeu) pour les
+  //    matchs les plus proches uniquement (pas encore joués), plafonné par MAX_ENRICHED_FIXTURES.
+  const now = Date.now();
+  const toEnrich = filtered
+    .filter((item) => new Date(item.fixture.date).getTime() >= now)
+    .filter((item) => fixtureIdByExternal.has(String(item.fixture.id)))
+    .slice(0, MAX_ENRICHED_FIXTURES);
 
-  for (const externalId of nearestExternalIds) {
+  let oddsUpserted = 0;
+  let h2hUpserted = 0;
+  let injuriesUpserted = 0;
+  const standingsCache = new Map<string, Map<number, number>>(); // leagueExternalId -> teamId -> position
+
+  for (const item of toEnrich) {
+    const fixtureId = fixtureIdByExternal.get(String(item.fixture.id))!;
+    const updatePatch: Record<string, unknown> = {};
+
+    // --- Cotes réelles (1xBet en priorité), 3 marchés extraits de la même réponse ---
     try {
-      const oddsRes = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${externalId}`, {
+      const oddsRes = await fetch(`${API_FOOTBALL_BASE}/odds?fixture=${item.fixture.id}`, {
         headers: { "x-apisports-key": apiKey },
         next: { revalidate: 0 },
       });
       const oddsJson = await oddsRes.json();
       const entry = (oddsJson.response ?? [])[0];
-      if (!entry) continue;
-
-      const odds = extractMatchWinnerOdds(entry.bookmakers);
-      if (!odds) continue;
-
-      await supabase
-        .from("fixtures")
-        .update({ odds_home: odds.home, odds_draw: odds.draw, odds_away: odds.away })
-        .eq("id", fixtureIdByExternal.get(externalId));
-      oddsUpserted++;
+      if (entry) {
+        const matchWinner = extractOddsMarket(entry.bookmakers, "Match Winner");
+        if (matchWinner) {
+          const home = matchWinner.find((v) => v.value === "Home")?.odd;
+          const draw = matchWinner.find((v) => v.value === "Draw")?.odd;
+          const away = matchWinner.find((v) => v.value === "Away")?.odd;
+          if (home && draw && away) {
+            updatePatch.odds_home = Number(home);
+            updatePatch.odds_draw = Number(draw);
+            updatePatch.odds_away = Number(away);
+            oddsUpserted++;
+          }
+        }
+        const overUnder = extractOddsMarket(entry.bookmakers, "Goals Over/Under");
+        const over25 = overUnder?.find((v) => v.value === "Over 2.5")?.odd;
+        if (over25) updatePatch.odds_over25 = Number(over25);
+        const btts = extractOddsMarket(entry.bookmakers, "Both Teams Score");
+        const bttsYes = btts?.find((v) => v.value === "Yes")?.odd;
+        if (bttsYes) updatePatch.odds_btts_yes = Number(bttsYes);
+      }
     } catch (e: any) {
-      errors.push(`Cotes match ${externalId} : ${e.message}`);
+      errors.push(`Cotes match ${item.fixture.id} : ${e.message}`);
+    }
+
+    // --- Confrontations directes (H2H), pondérées faiblement dans le modèle ---
+    try {
+      const h2hRes = await fetch(
+        `${API_FOOTBALL_BASE}/fixtures/headtohead?h2h=${item.teams.home.id}-${item.teams.away.id}&last=5`,
+        { headers: { "x-apisports-key": apiKey }, next: { revalidate: 0 } }
+      );
+      const h2hJson = await h2hRes.json();
+      const meetings: any[] = (h2hJson.response ?? []).filter((m: any) => m.fixture?.status?.short === "FT");
+      if (meetings.length >= 3) {
+        const homeWins = meetings.filter((m: any) => {
+          // Victoire de l'équipe qui jouait alors à domicile ACTUELLEMENT (item.teams.home.id).
+          const homeWasHome = String(m.teams.home.id) === String(item.teams.home.id);
+          const homeGoals = homeWasHome ? m.goals.home : m.goals.away;
+          const awayGoals = homeWasHome ? m.goals.away : m.goals.home;
+          return homeGoals > awayGoals;
+        }).length;
+        updatePatch.h2h_home_win_rate = Number((homeWins / meetings.length).toFixed(3));
+        updatePatch.h2h_sample_size = meetings.length;
+        h2hUpserted++;
+      }
+    } catch (e: any) {
+      errors.push(`H2H match ${item.fixture.id} : ${e.message}`);
+    }
+
+    // --- Blessures/absences connues, traduites en impact (0 à 0.15) sur le potentiel offensif ---
+    try {
+      const injRes = await fetch(`${API_FOOTBALL_BASE}/injuries?fixture=${item.fixture.id}`, {
+        headers: { "x-apisports-key": apiKey },
+        next: { revalidate: 0 },
+      });
+      const injJson = await injRes.json();
+      const list: any[] = injJson.response ?? [];
+      const homeOut = list.filter((i: any) => String(i.team?.id) === String(item.teams.home.id)).length;
+      const awayOut = list.filter((i: any) => String(i.team?.id) === String(item.teams.away.id)).length;
+      if (list.length > 0) {
+        // La présence de données (même "0 blessé") est une info réelle, pas une invention :
+        // l'endpoint /injuries a répondu pour ce match, donc homeOut/awayOut reflètent l'état connu.
+        await supabase
+          .from("teams")
+          .update({ injuries_impact: Math.min(0.15, homeOut * 0.03) })
+          .eq("external_api_id", String(item.teams.home.id));
+        await supabase
+          .from("teams")
+          .update({ injuries_impact: Math.min(0.15, awayOut * 0.03) })
+          .eq("external_api_id", String(item.teams.away.id));
+        injuriesUpserted++;
+      }
+    } catch (e: any) {
+      errors.push(`Blessures match ${item.fixture.id} : ${e.message}`);
+    }
+
+    // --- Enjeu du match (course au titre / maintien / dead rubber), via le classement de la ligue ---
+    try {
+      const leagueExternalId = String(item.league.id);
+      if (!standingsCache.has(leagueExternalId)) {
+        const season = item.league.season ?? new Date().getFullYear();
+        const standRes = await fetch(`${API_FOOTBALL_BASE}/standings?league=${leagueExternalId}&season=${season}`, {
+          headers: { "x-apisports-key": apiKey },
+          next: { revalidate: 0 },
+        });
+        const standJson = await standRes.json();
+        const table: any[] = standJson.response?.[0]?.league?.standings?.[0] ?? [];
+        const positions = new Map<number, number>();
+        for (const row of table) positions.set(row.team.id, row.rank);
+        standingsCache.set(leagueExternalId, positions);
+      }
+      const positions = standingsCache.get(leagueExternalId);
+      const totalTeams = positions?.size ?? 0;
+      const homePos = positions?.get(item.teams.home.id);
+      const awayPos = positions?.get(item.teams.away.id);
+      const note = buildStakesNote(homePos, awayPos, totalTeams, item.teams.home.name, item.teams.away.name);
+      if (note) updatePatch.stakes_note = note;
+    } catch (e: any) {
+      errors.push(`Classement ligue ${item.league.id} : ${e.message}`);
+    }
+
+    if (Object.keys(updatePatch).length > 0) {
+      const { error: patchError } = await supabase.from("fixtures").update(updatePatch).eq("id", fixtureId);
+      if (patchError) errors.push(`Mise à jour enrichissement ${item.fixture.id} : ${patchError.message}`);
     }
   }
 
@@ -233,26 +338,43 @@ async function handler(req: NextRequest) {
     fixturesFoundAllLeagues: allRaw.length,
     fixturesConsidered: filtered.length,
     fixturesUpserted,
+    enrichedFixtures: toEnrich.length,
     oddsUpserted,
+    h2hUpserted,
+    injuriesUpserted,
     errors,
   });
 }
 
-/** Cote 1X2 ("Match Winner") du bookmaker préféré (1xBet), sinon celles du premier bookmaker disponible. */
-function extractMatchWinnerOdds(bookmakers: any[] = []): { home: number; draw: number; away: number } | null {
+/** Extrait les valeurs d'un marché de pari donné (ex: "Match Winner", "Goals Over/Under") du bookmaker préféré (1xBet), sinon du premier disponible. */
+function extractOddsMarket(bookmakers: any[] = [], marketName: string): { value: string; odd: string }[] | null {
   const preferred = bookmakers.find((b) => b.name?.toLowerCase() === PREFERRED_BOOKMAKER.toLowerCase());
   const source = preferred ?? bookmakers[0];
   if (!source) return null;
+  const bet = source.bets?.find((b: any) => b.name === marketName);
+  return bet?.values ?? null;
+}
 
-  const matchWinnerBet = source.bets?.find((b: any) => b.name === "Match Winner");
-  if (!matchWinnerBet) return null;
+/** Construit une note courte et honnête sur l'enjeu du match à partir des positions au classement (null si position inconnue ou classement non disponible). */
+function buildStakesNote(
+  homePos: number | undefined,
+  awayPos: number | undefined,
+  totalTeams: number,
+  homeName: string,
+  awayName: string
+): string | null {
+  if (!homePos || !awayPos || !totalTeams) return null;
+  const relegationZone = totalTeams - 3;
+  const homeTitleRace = homePos <= 3;
+  const awayTitleRace = awayPos <= 3;
+  const homeRelegation = homePos >= relegationZone;
+  const awayRelegation = awayPos >= relegationZone;
 
-  const home = matchWinnerBet.values?.find((v: any) => v.value === "Home")?.odd;
-  const draw = matchWinnerBet.values?.find((v: any) => v.value === "Draw")?.odd;
-  const away = matchWinnerBet.values?.find((v: any) => v.value === "Away")?.odd;
-  if (!home || !draw || !away) return null;
-
-  return { home: Number(home), draw: Number(draw), away: Number(away) };
+  if (homeTitleRace && awayTitleRace) return `Choc au sommet : ${homeName} (${homePos}e) reçoit ${awayName} (${awayPos}e).`;
+  if (homeRelegation && awayRelegation) return `Match crucial pour le maintien entre deux équipes menacées.`;
+  if (homeTitleRace || awayTitleRace) return `Enjeu fort pour la course au titre pour l'une des deux équipes.`;
+  if (homeRelegation || awayRelegation) return `Enjeu fort pour le maintien pour l'une des deux équipes.`;
+  return null;
 }
 
 function mapStatus(short?: string): "scheduled" | "live" | "finished" | "postponed" | "cancelled" {

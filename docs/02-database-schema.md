@@ -3,6 +3,12 @@
 Implémenté intégralement dans [`supabase/migrations/0001_init.sql`](../supabase/migrations/0001_init.sql)
 (PostgreSQL via Supabase). Résumé des 10 tables :
 
+> Colonnes ajoutées depuis par [`supabase/migrations/0004_prediction_context.sql`](../supabase/migrations/0004_prediction_context.sql) :
+> `fixtures.ratings_applied`, `fixtures.odds_over25`, `fixtures.odds_btts_yes`,
+> `fixtures.h2h_home_win_rate`, `fixtures.h2h_sample_size`, `fixtures.stakes_note`,
+> `predictions.edge_value`, `predictions.market_prob_used`, `predictions.data_gaps` — voir
+> `docs/05-ai-prompt.md` pour le contexte (moteur Dixon-Coles + signaux contextuels).
+
 ## Vue d'ensemble (relations)
 
 ```
