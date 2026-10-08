@@ -27,7 +27,8 @@ export function useTranslation() {
       const translated: SubtitleCue[] = [];
       for (let index = 0; index < cues.length; index += 1) {
         const cue = cues[index];
-        const result = await translator(cue.text, {
+        // Les options NLLB ne sont pas encore déclarées dans les types de Transformers.js 2.x.
+        const result = await (translator as any)(cue.text, {
           src_lang: sourceLanguage,
           tgt_lang: "eng_Latn",
         });
