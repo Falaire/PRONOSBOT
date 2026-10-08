@@ -45,6 +45,10 @@ Importer le dépôt dans Vercel. Les réglages par défaut Next.js suffisent : c
 - Les vidéos très longues ou haute résolution peuvent consommer beaucoup de mémoire ; un mode qualité réduite mobile est à ajouter.
 - Le fond transparent est proposé dans l'interface, mais l'encodage MediaRecorder peut l'aplatir selon le navigateur.
 
+## Traduction anglaise locale
+
+La transcription peut être traduite en anglais dans le navigateur avec `hooks/useTranslation.ts` et le modèle gratuit NLLB-200 de Transformers.js. Le premier chargement peut être volumineux et la vitesse dépend de l'appareil. Les sous-titres conservent leurs timestamps ; seul leur texte est remplacé par la traduction anglaise.
+
 ## Déploiement
 
 Le projet est configuré pour Vercel sur la branche `arena/76ff3434-pronosbot`.
