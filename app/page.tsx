@@ -1,302 +1,40 @@
-import { Navbar } from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PricingCard } from "@/components/PricingCard";
-import { MatchCard } from "@/components/MatchCard";
-import { FAQ } from "@/components/FAQ";
-import { DEMO_FIXTURES } from "@/lib/demo-data";
-import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
-import { APP_NAME, APP_NAME_FULL } from "@/lib/brand";
-import {
-  Brain,
-  ShieldCheck,
-  Smartphone,
-  MessageCircle,
-  Trophy,
-  LineChart,
-  Mail,
-  Phone,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
-import Link from "next/link";
+"use client";
 
-const FEATURES = [
-  {
-    icon: Brain,
-    title: "Agent IA de prédiction",
-    desc: "Probabilités 1X2, Over/Under, BTTS, score probable et indice de confiance sur chaque match, expliqués en français simple.",
-  },
-  {
-    icon: Trophy,
-    title: "Ligues africaines en priorité",
-    desc: "Ligue 1 Togo, CAN, Ligue des Champions CAF, championnats CEDEAO + top 5 championnats européens.",
-  },
-  {
-    icon: LineChart,
-    title: "Mode Value Bet",
-    desc: "Comparaison automatique entre la probabilité de l'IA et les cotes du marché pour repérer les paris à valeur.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Alertes WhatsApp / Telegram",
-    desc: "Recevez les pronostics du jour directement sur WhatsApp ou Telegram, sans ouvrir l'appli.",
-  },
-  {
-    icon: Smartphone,
-    title: "Mobile-first, léger",
-    desc: "Interface ultra rapide, pensée pour les smartphones d'entrée de gamme et une connexion 3G.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Paiement 100% local",
-    desc: "T-Money (Mixx by Yas) et Flooz (Moov Africa). Aucune carte bancaire nécessaire.",
-  },
-];
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Upload, Download, Play, RotateCcw, SlidersHorizontal, ShieldCheck, Sparkles, Video, Loader2 } from "lucide-react";
+import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 
-const STEPS = [
-  {
-    icon: Mail,
-    title: "Crée ton compte",
-    desc: "Email + code de vérification. Trente secondes, sans mot de passe à retenir.",
-  },
-  {
-    icon: Phone,
-    title: "Active ton essai gratuit",
-    desc: "Un numéro de téléphone, 3 jours d'accès complet offerts — sans carte bancaire.",
-  },
-  {
-    icon: Sparkles,
-    title: "Reçois tes pronostics",
-    desc: "Chaque matin, les analyses IA du jour, sur l'appli et par WhatsApp/Telegram.",
-  },
-];
+const CONNECTIONS: [number, number][] = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
+const MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
 
-const LEAGUES_COVERED = [
-  "Ligue 1 Togo",
-  "Coupe d'Afrique des Nations",
-  "Ligue des Champions CAF",
-  "Ligue 1 Côte d'Ivoire",
-  "Ligue 1 Sénégal",
-  "Ligue des Champions UEFA",
-  "Premier League",
-  "LaLiga",
-  "Serie A",
-  "Bundesliga",
-  "Ligue 1",
-];
+type Settings = { stroke:string; background:string; width:number; head:number; smoothing:number };
+const initial: Settings = { stroke:"#ffffff", background:"#050505", width:5, head:1, smoothing:70 };
 
-const PLANS = [
-  { code: "hebdo", name: "Hebdo", priceFcfa: 1000, durationDays: 7, features: ["Accès illimité 7 jours", "Alertes Telegram", "Idéal pour tester"] },
-  { code: "mensuel", name: "Mensuel", priceFcfa: 3000, durationDays: 30, highlighted: true, features: ["Accès illimité", "Analyses détaillées + explications", "Alertes WhatsApp/Telegram", "Mode Value Bet"] },
-  { code: "trimestriel", name: "Trimestriel", priceFcfa: 7500, durationDays: 90, perMonthFcfa: 2500, features: ["Tout Mensuel", "-17% vs mensuel", "Support prioritaire"] },
-  { code: "annuel", name: "Annuel", priceFcfa: 25000, durationDays: 365, perMonthFcfa: 2083, features: ["Tout Trimestriel", "-30% vs mensuel", "2 mois offerts"] },
-];
+export default function Home() {
+  const video = useRef<HTMLVideoElement>(null), canvas = useRef<HTMLCanvasElement>(null), fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File|null>(null); const [url,setUrl]=useState(""); const [output,setOutput]=useState("");
+  const [settings,setSettings]=useState(initial); const [progress,setProgress]=useState(0); const [status,setStatus]=useState("Prêt à transformer");
+  const [processing,setProcessing]=useState(false); const [error,setError]=useState(""); const [hasPose,setHasPose]=useState(false);
+  const landmarker=useRef<PoseLandmarker|null>(null); const previous=useRef<Record<number,{x:number,y:number}>>({});
 
-export default function LandingPage() {
-  return (
-    <>
-      <Navbar />
-      <main className="flex-1">
-        {/* HERO */}
-        <section className="relative overflow-hidden bg-aurora">
-          <div className="absolute inset-0 opacity-40 bg-dot-grid [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
-          <div className="relative mx-auto max-w-6xl px-4 pt-16 sm:pt-24 pb-20 text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold text-brand-400 mb-6 animate-fade-up">
-              🌍 Conçu pour l&apos;Afrique de l&apos;Ouest et Centrale
-            </span>
-            <h1
-              className="text-4xl sm:text-6xl font-extrabold leading-[1.08] text-white tracking-tight animate-fade-up"
-              style={{ animationDelay: "80ms" }}
-            >
-              Les pronostics foot par
-              <br className="hidden sm:block" />{" "}
-              <span className="bg-gradient-to-r from-brand-400 via-brand-500 to-accent-500 bg-clip-text text-transparent">
-                Intelligence Artificielle
-              </span>
-            </h1>
-            <p
-              className="mt-6 text-white/60 max-w-2xl mx-auto text-base sm:text-lg animate-fade-up"
-              style={{ animationDelay: "160ms" }}
-            >
-              KickPredict analyse la forme des équipes, le jeu collectif et l'historique des confrontations pour
-              vous donner une probabilité claire, un score probable et une explication simple avant chaque match —
-              payable en <span className="text-white font-medium">T-Money / Flooz</span>.
-            </p>
-            <div
-              className="mt-9 flex items-center justify-center gap-3 flex-wrap animate-fade-up"
-              style={{ animationDelay: "240ms" }}
-            >
-              <Button href="/inscription" size="lg" className="group">
-                Essai gratuit 3 jours
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </Button>
-              <Button href="#pricing" variant="outline" size="lg">Voir les tarifs</Button>
-            </div>
-            <p className="mt-4 text-xs text-white/35">Sans carte bancaire. Résiliable à tout moment. 18+.</p>
-
-            {/* Bandeau de confiance */}
-            <div
-              className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs text-white/40 animate-fade-up"
-              style={{ animationDelay: "320ms" }}
-            >
-              <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-brand-500" /> Paiement Mobile Money sécurisé</span>
-              <span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5 text-brand-500" /> Modèle statistique Elo + Poisson</span>
-              <span className="flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-brand-500" /> Support WhatsApp réactif</span>
-            </div>
-          </div>
-
-          {/* Bande des ligues couvertes — défilement continu */}
-          <div className="relative border-t border-white/[0.06] py-5 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-            <div className="flex items-center gap-3 w-max animate-marquee">
-              {[...LEAGUES_COVERED, ...LEAGUES_COVERED].map((league, i) => (
-                <span
-                  key={`${league}-${i}`}
-                  className="shrink-0 text-xs font-medium text-white/45 border border-white/10 rounded-full px-3.5 py-1.5 whitespace-nowrap"
-                >
-                  {league}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* COMMENT ÇA MARCHE */}
-        <section className="mx-auto max-w-6xl px-4 py-14">
-          <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 relative">
-            <div className="hidden sm:block absolute top-7 left-[16.6%] right-[16.6%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-            {STEPS.map(({ icon: Icon, title, desc }, i) => (
-              <div key={title} className="relative flex flex-col items-center text-center gap-3">
-                <div className="relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl bg-ink-900 border border-white/10 shadow-card">
-                  <Icon className="w-6 h-6 text-brand-400" />
-                  <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-brand-500 text-[10px] font-bold flex items-center justify-center text-white">
-                    {i + 1}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-white">{title}</h3>
-                <p className="text-sm text-white/55 max-w-xs">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* MATCHS DU JOUR (aperçu) */}
-        <section className="mx-auto max-w-6xl px-4 py-10">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-white">Pronostics du jour</h2>
-              <p className="text-sm text-white/50 mt-0.5">Un aperçu, mis à jour chaque matin.</p>
-            </div>
-            <Link href="/dashboard" className="text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors flex items-center gap-1">
-              Voir tout <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {DEMO_FIXTURES.slice(0, 3).map((f) => (
-              <MatchCard key={f.id} fixture={f} locked={!f.free} />
-            ))}
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="mx-auto max-w-6xl px-4 py-14">
-          <div className="text-center mb-10">
-            <Badge tone="brand" className="mb-3">Pourquoi KickPredict</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce qu'il faut, rien de superflu</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map(({ icon: Icon, title, desc }) => (
-              <Card key={title} variant="glow">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 mb-4">
-                  <Icon className="w-5 h-5 text-brand-400" />
-                </div>
-                <h3 className="font-semibold text-white mb-1.5">{title}</h3>
-                <p className="text-sm text-white/55 leading-relaxed">{desc}</p>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* PRICING */}
-        <section id="pricing" className="mx-auto max-w-6xl px-4 py-16">
-          <div className="text-center mb-10">
-            <Badge tone="accent" className="mb-3">Tarifs</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Un abonnement en FCFA, sans surprise</h2>
-            <p className="text-white/55 mt-2 text-sm">Paiement Mobile Money instantané — T-Money & Flooz</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PLANS.map((p) => (
-              <PricingCard key={p.code} plan={p} />
-            ))}
-          </div>
-        </section>
-
-        {/* WHATSAPP CTA */}
-        <section className="mx-auto max-w-4xl px-4 pb-16">
-          <Card className="flex flex-col sm:flex-row items-center justify-between gap-5 bg-gradient-to-br from-brand-500/15 via-white/[0.03] to-transparent border-brand-500/25">
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500/15 border border-brand-500/25 shrink-0">
-                <MessageCircle className="w-6 h-6 text-brand-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white">Recevez les pronostics du jour sur WhatsApp</h3>
-                <p className="text-sm text-white/55">Gratuit à l'inscription, sans installer d'application.</p>
-              </div>
-            </div>
-            <Button href={`https://wa.me/${MANUAL_PAYMENT_INFO.whatsappNumber}`} variant="secondary" className="shrink-0">
-              Rejoindre sur WhatsApp
-            </Button>
-          </Card>
-        </section>
-
-        {/* FAQ */}
-        <section className="mx-auto max-w-3xl px-4 py-16">
-          <div className="text-center mb-10">
-            <Badge tone="neutral" className="mb-3">Questions fréquentes</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce que tu dois savoir</h2>
-          </div>
-          <FAQ />
-        </section>
-
-        {/* CTA FINAL */}
-        <section className="mx-auto max-w-5xl px-4 pb-16">
-          <Card
-            variant="glow"
-            className="relative overflow-hidden text-center py-14 px-6 bg-gradient-to-br from-brand-500/15 via-ink-900 to-accent-500/10 border-brand-500/25"
-          >
-            <div className="absolute inset-0 opacity-30 bg-dot-grid [mask-image:radial-gradient(circle,black,transparent_70%)]" aria-hidden />
-            <div className="relative">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-                Prêt à parier plus intelligemment ?
-              </h2>
-              <p className="text-white/60 max-w-xl mx-auto mb-7 text-sm sm:text-base">
-                Rejoins {APP_NAME} et reçois dès aujourd&apos;hui des analyses claires sur les matchs
-                d&apos;Afrique et des grands championnats européens.
-              </p>
-              <Button href="/inscription" size="lg" className="group">
-                Essai gratuit 3 jours
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </Button>
-            </div>
-          </Card>
-        </section>
-
-        {/* DISCLAIMER LEGAL */}
-        <section className="mx-auto max-w-4xl px-4 pb-16 text-center">
-          <p className="text-xs text-white/35 leading-relaxed">
-            {APP_NAME} est un service d&apos;analyse statistique et d&apos;information sportive (18+). Nous ne sommes
-            ni un bookmaker ni un opérateur de jeux d'argent : nous ne prenons aucun pari et ne garantissons aucun
-            gain. Les pronostics sont fournis à titre indicatif. Jouez de manière responsable.{" "}
-            <Link href="/legal/cgu" className="underline hover:text-white/60">CGU</Link> ·{" "}
-            <Link href="/legal/confidentialite" className="underline hover:text-white/60">Confidentialité</Link>
-          </p>
-        </section>
-      </main>
-
-      <footer className="border-t border-white/[0.08] py-8 text-center text-xs text-white/35">
-        © {new Date().getFullYear()} {APP_NAME_FULL} — basé à Lomé, Togo 🇹🇬
-      </footer>
-    </>
-  );
+  useEffect(()=>()=>{ if(url) URL.revokeObjectURL(url); if(output) URL.revokeObjectURL(output); },[url,output]);
+  const choose=(f:File)=>{ setError(""); if(!f.type.startsWith("video/")){setError("Format non supporté. Choisissez un fichier MP4, WebM ou MOV.");return} if(f.size>500*1024*1024){setError("La vidéo dépasse la limite de 500 Mo.");return} setFile(f);setUrl(URL.createObjectURL(f));setOutput("");setProgress(0);setStatus("Vidéo prête à traiter"); };
+  const update=(key:keyof Settings,value:string|number)=>setSettings(s=>({...s,[key]:value}));
+  const start=useCallback(async()=>{
+    if(!video.current||!canvas.current||!file)return; setProcessing(true);setError("");setOutput("");setProgress(0);setStatus("Chargement du modèle de pose…");
+    try {
+      if(!landmarker.current){ const vision=await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm"); try { landmarker.current=await PoseLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL,delegate:"GPU"},runningMode:"VIDEO",numPoses:1,minPoseDetectionConfidence:.35,minPosePresenceConfidence:.35}); } catch { landmarker.current=await PoseLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:MODEL,delegate:"CPU"},runningMode:"VIDEO",numPoses:1,minPoseDetectionConfidence:.35,minPosePresenceConfidence:.35}); } }
+      const v=video.current,c=canvas.current; await new Promise<void>(r=>{if(v.readyState>=1)r();else v.onloadedmetadata=()=>r()});
+      c.width=v.videoWidth;c.height=v.videoHeight; const ctx=c.getContext("2d")!; const stream=c.captureStream(30); const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":"video/webm"; const recorder=new MediaRecorder(stream,{mimeType:mime}); const chunks:Blob[]=[];recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data); const done=new Promise<void>(r=>recorder.onstop=()=>r()); recorder.start(200); previous.current={}; v.currentTime=0; await v.play();
+      const draw=(_:number)=>{ const t=v.currentTime*1000; const result=landmarker.current!.detectForVideo(v,t); ctx.clearRect(0,0,c.width,c.height); if(settings.background==="video"){ctx.drawImage(v,0,0,c.width,c.height)} else if(settings.background!=="transparent"){ctx.fillStyle=settings.background;ctx.fillRect(0,0,c.width,c.height)} const pose=result.landmarks[0]; if(pose){setHasPose(true); const p=(i:number)=>{const q=pose[i], old=previous.current[i]; if(q.visibility!==undefined&&q.visibility<.4&&old)return old; const a=settings.smoothing/100*.82; const out=old?{x:old.x+(q.x-old.x)*(1-a),y:old.y+(q.y-old.y)*(1-a)}:{x:q.x,y:q.y};previous.current[i]=out;return out}; const line=(a:number,b:number)=>{const x=p(a),y=p(b);ctx.beginPath();ctx.moveTo(x.x*c.width,x.y*c.height);ctx.lineTo(y.x*c.width,y.y*c.height);ctx.stroke()}; ctx.strokeStyle=settings.stroke;ctx.lineWidth=settings.width;ctx.lineCap="round";ctx.lineJoin="round"; CONNECTIONS.forEach(x=>line(...x)); const nose=p(0), l=p(7),r=p(8);const rad=Math.max(14,Math.hypot((l.x-r.x)*c.width,(l.y-r.y)*c.height)*settings.head*1.65);ctx.beginPath();ctx.arc(nose.x*c.width,nose.y*c.height-rad*.45,rad,0,Math.PI*2);ctx.stroke(); }
+        setProgress(v.duration?Math.min(100,v.currentTime/v.duration*100):0); if(v.ended){recorder.stop();return} if("requestVideoFrameCallback" in v) v.requestVideoFrameCallback(draw); else requestAnimationFrame(()=>draw(performance.now())); }; if("requestVideoFrameCallback" in v) v.requestVideoFrameCallback(draw); else requestAnimationFrame(()=>draw(performance.now())); await done; setOutput(URL.createObjectURL(new Blob(chunks,{type:"video/webm"})));setStatus("Animation terminée");setProgress(100);v.pause();
+    } catch(e){console.error(e);setError("Impossible de traiter cette vidéo. Vérifiez le format et réessayez.");setStatus("Erreur de traitement");} finally{setProcessing(false)}
+  },[file,settings]);
+  return <main className="app-shell"><header><div className="brand"><span className="brand-mark"><Sparkles size={17}/></span><span>POSE<span className="accent">TRACE</span></span></div><span className="privacy"><ShieldCheck size={15}/> 100% dans votre navigateur</span></header>
+    <section className="hero"><div className="eyebrow">ANIMATION PAR IA · SIMPLE · PRIVÉE</div><h1>Transformez vos mouvements<br/><em>en dessin vivant.</em></h1><p>Importez une vidéo, ajustez votre style et laissez notre moteur de pose créer un stickman fluide en quelques secondes.</p></section>
+    <section className="workspace"><div className="upload-zone" onClick={()=>!processing&&fileRef.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)choose(f)}}>{file?<><Video size={28}/><strong>{file.name}</strong><small>{(file.size/1024/1024).toFixed(1)} Mo · vidéo sélectionnée</small></>:<><span className="upload-icon"><Upload size={24}/></span><strong>Déposez votre vidéo ici</strong><small>ou cliquez pour parcourir · MP4, WebM, MOV · 500 Mo max</small></>}<input ref={fileRef} type="file" accept="video/*" hidden onChange={e=>e.target.files&&choose(e.target.files[0])}/></div>
+    <div className="previews"><div className="preview-card"><div className="card-title"><span>ORIGINAL</span>{file&&<span className="live-dot">● SOURCE</span>}</div><div className="media"><video ref={video} src={url} controls={!!file} muted playsInline/></div></div><div className="preview-card"><div className="card-title"><span>STICKMAN</span>{output&&<span className="done">● TERMINÉ</span>}</div><div className="media output-media">{output?<video src={output} controls autoPlay loop/>:<><canvas ref={canvas}/><span className="empty">Votre animation apparaîtra ici</span></>}</div></div></div>
+    <aside className="controls"><div className="controls-heading"><SlidersHorizontal size={18}/><strong>Style de l’animation</strong><span>APERÇU EN DIRECT</span></div><div className="control-grid"><label>Couleur du trait<input type="color" value={settings.stroke} onChange={e=>update("stroke",e.target.value)}/></label><label>Fond<select value={settings.background} onChange={e=>update("background",e.target.value)}><option value="#050505">Noir profond</option><option value="#ffffff">Blanc</option><option value="#00b140">Vert chroma</option><option value="transparent">Transparent</option><option value="video">Vidéo originale</option></select></label><label>Épaisseur <b>{settings.width}px</b><input type="range" min="2" max="14" value={settings.width} onChange={e=>update("width",+e.target.value)}/></label><label>Taille de la tête <b>{settings.head.toFixed(1)}×</b><input type="range" min=".6" max="1.6" step=".1" value={settings.head} onChange={e=>update("head",+e.target.value)}/></label><label className="wide">Lissage des mouvements <b>{settings.smoothing}%</b><input type="range" min="0" max="95" value={settings.smoothing} onChange={e=>update("smoothing",+e.target.value)}/></label></div></aside>
+    {error&&<div className="error">{error}</div>}<div className="actions"><button className="primary" disabled={!file||processing} onClick={start}>{processing?<><Loader2 className="spin" size={17}/> Traitement…</>:<><Play size={17}/> Générer le stickman</>}</button>{output&&<a className="download" href={output} download="stickman-animation.webm"><Download size={17}/> Télécharger WebM</a>}{file&&<button className="reset" onClick={()=>{setFile(null);setUrl("");setOutput("");setStatus("Prêt à transformer")}}><RotateCcw size={15}/> Réinitialiser</button>}</div>{(processing||progress>0)&&<div className="progress-wrap"><div><span>{status}</span><b>{Math.round(progress)}%</b></div><div className="progress"><i style={{width:`${progress}%`}}/></div></div>}</section>
+    <footer><span>Vos vidéos ne quittent jamais votre appareil.</span><span>PoseTrace · MVP navigateur · WebM</span></footer></main>;
 }
