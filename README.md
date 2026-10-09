@@ -1,14 +1,16 @@
 # PoseTrace
 
-PoseTrace transforme une vidéo locale en animation stickman, directement dans le navigateur. La vidéo originale n'est jamais envoyée à un serveur.
+PoseTrace transforme une vidéo locale en animation verticale directement dans le navigateur. Les vidéos, personnages, décors et pistes audio ne sont pas envoyés à un serveur.
 
-## Architecture
+## Fonctionnalités actuelles
 
-- **Next.js + TypeScript** : interface responsive déployable sur Vercel.
-- **MediaPipe Pose Landmarker** : détection d'une personne côté client, avec modèle léger et accélération GPU.
-- **Canvas HTML5** : dessin du squelette blanc sur fond configurable.
-- **Filtre exponentiel** : lissage temporel et maintien de la dernière position fiable pendant les occlusions.
-- **MediaRecorder** : export WebM lisible et téléchargeable.
+- Import local MP4, WebM ou MOV avec glisser-déposer.
+- Détection d'une personne par MediaPipe Pose Landmarker, exécuté côté navigateur (GPU puis repli CPU).
+- **Cartoon dessiné** : corps articulé d'après les repères de pose, visage à contour, yeux, sourcils, cravate et bouche réagissant au niveau sonore.
+- **Mes images** : personnage PNG transparent et décor image importés par l'utilisateur ; cadrage et taille du personnage suivent les repères détectés.
+- Fond uni, vidéo recadrée, salle de classe dessinée en Canvas ou image de décor.
+- Rendu Canvas 1080 × 1920 (9:16) et capture avec MediaRecorder. Le navigateur choisit WebM ou MP4 lorsqu'il le prend en charge ; WebM est généralement utilisé sous Chrome.
+- La capture audio locale est incluse si le navigateur prend en charge la combinaison audio/vidéo MediaRecorder.
 
 ## Installation
 
@@ -17,38 +19,35 @@ npm install
 npm run dev
 ```
 
-Ouvrir http://localhost:3000. Pour une vérification de production :
+Ouvrir http://localhost:3000. Pour vérifier une compilation de production :
 
 ```bash
 npm run build
 npm start
 ```
 
-Le modèle MediaPipe est téléchargé au premier traitement depuis les CDN Google/jsDelivr ; l'application elle-même ne transmet aucune vidéo.
+Le moteur MediaPipe et son modèle sont téléchargés à la première analyse depuis jsDelivr et Google Storage. Aucun contenu utilisateur n'est envoyé à ces hôtes ; seuls les fichiers de bibliothèque et le modèle sont chargés.
 
 ## Utilisation
 
-1. Déposer un fichier MP4, WebM ou MOV (500 Mo maximum).
-2. Régler couleur du trait, fond, épaisseur, taille de tête et lissage.
-3. Cliquer sur **Générer le stickman**.
-4. Prévisualiser puis télécharger le fichier WebM.
+1. Importer une vidéo contenant une personne visible.
+2. Choisir **Cartoon dessiné** ou **Mes images**.
+3. En mode **Mes images**, fournir un PNG transparent du personnage ; le décor est facultatif.
+4. Choisir un fond, ajuster le lissage et les dimensions visuelles, puis cliquer sur **Générer l'animation**.
+5. Prévisualiser et télécharger le résultat.
 
-## Déploiement Vercel
+## Limites actuelles — à lire avant usage
 
-Importer le dépôt dans Vercel. Les réglages par défaut Next.js suffisent : commande de build `npm run build`, sortie `.next`, Node 18 ou supérieur. Aucune variable d'environnement n'est nécessaire pour le MVP.
+- Le modèle détecte une seule personne.
+- Le mode **Mes images** déplace, redimensionne et incline légèrement le PNG entier. Un fichier PNG unique ne permet pas de plier les bras et les jambes séparément ; un rig articulé d'images découpées n'est pas encore pris en charge.
+- La bouche du cartoon suit l'intensité sonore, pas encore les phonèmes ni les mots.
+- La transcription Whisper, les sous-titres, la traduction anglaise et la conversion ffmpeg.wasm vers MP4 ne sont pas encore branchés à l'interface.
+- L'export est en temps réel : une vidéo d'une minute prend environ une minute, et les longues vidéos peuvent utiliser beaucoup de mémoire.
+- Le fonctionnement dépend du téléchargement initial du modèle MediaPipe et des capacités de l'appareil.
+- La prise en charge de l'audio et du format MP4 dépend du navigateur ; le site affiche un statut si l'audio n'est pas supporté.
 
-## Limites connues
+## Vercel
 
-- Le MVP suit une seule personne.
-- La sortie est WebM ; la conversion MP4/ffmpeg.wasm et GIF sont prévues pour une phase ultérieure.
-- Le traitement dépend des performances du navigateur et de la disponibilité du téléchargement du modèle MediaPipe.
-- Les vidéos très longues ou haute résolution peuvent consommer beaucoup de mémoire ; un mode qualité réduite mobile est à ajouter.
-- Le fond transparent est proposé dans l'interface, mais l'encodage MediaRecorder peut l'aplatir selon le navigateur.
+Projet Next.js compatible avec Vercel Hobby : commande de build `npm run build`, sortie Next.js automatique, Node 18 ou supérieur. Aucune variable d'environnement n'est nécessaire pour PoseTrace.
 
-## Traduction anglaise locale
-
-La transcription peut être traduite en anglais dans le navigateur avec `hooks/useTranslation.ts` et le modèle gratuit NLLB-200 de Transformers.js. Le premier chargement peut être volumineux et la vitesse dépend de l'appareil. Les sous-titres conservent leurs timestamps ; seul leur texte est remplacé par la traduction anglaise.
-
-## Déploiement
-
-Le projet est configuré pour Vercel sur la branche `arena/76ff3434-pronosbot`.
+Le travail PoseTrace est développé sur la branche `arena/76ff3434-pronosbot`. Ne pas fusionner la PR PoseTrace dans `main` tant que le projet d'origine KickPredict utilise encore ce dépôt.
