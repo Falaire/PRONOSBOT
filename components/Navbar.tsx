@@ -1,12 +1,16 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { SignOutButton } from "@/components/SignOutButton";
 import Link from "next/link";
 import { Zap, Sparkles } from "lucide-react";
-import { getCurrentUserState } from "@/lib/subscription";
+import { getCurrentUserState, getFirstName } from "@/lib/subscription";
+import { getNavNotificationState } from "@/lib/nav-notifications";
+import { NavLinkWithDot } from "@/components/NavLinkWithDot";
 import { APP_BADGE } from "@/lib/brand";
 
 export async function Navbar() {
-  const { userId, isPremium } = await getCurrentUserState();
+  const { userId, isPremium, fullName } = await getCurrentUserState();
+  const firstName = getFirstName(fullName);
+  const { latestPredictionAt, latestPaymentAt } = await getNavNotificationState(userId);
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-ink-950/70 backdrop-blur-xl">
@@ -21,7 +25,15 @@ export async function Navbar() {
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/60">
-          <Link href="/dashboard" className="hover:text-white transition-colors">Pronostics</Link>
+          <NavLinkWithDot
+            href="/dashboard"
+            storageKey="matchs"
+            latestAt={latestPredictionAt}
+            className="hover:text-white transition-colors"
+            dotClassName="-top-1 -right-2.5"
+          >
+            Pronostics
+          </NavLinkWithDot>
           <Link href="/dashboard/carnet" className="hover:text-white transition-colors">Mon carnet</Link>
           <Link href="/dashboard/abonnement" className="hover:text-white transition-colors">Abonnement</Link>
           <Link href="/dashboard/historique" className="hover:text-white transition-colors">Précision IA</Link>
@@ -29,14 +41,23 @@ export async function Navbar() {
         <div className="flex items-center gap-2">
           {userId ? (
             <>
+              {firstName && (
+                <span className="hidden lg:inline text-sm text-white/70 mr-1">Bonjour {firstName} 👋</span>
+              )}
               {isPremium && (
                 <span className="hidden sm:flex items-center gap-1 text-[11px] font-bold text-accent-500 border border-accent-500/40 rounded-full px-2.5 py-1">
                   <Sparkles className="w-3 h-3" /> Premium
                 </span>
               )}
-              <Button href="/dashboard/compte" variant="outline" size="sm">
+              <NavLinkWithDot
+                href="/dashboard/compte"
+                storageKey="compte"
+                latestAt={latestPaymentAt}
+                className={buttonClasses({ variant: "outline", size: "sm" })}
+                dotClassName="-top-0.5 -right-0.5"
+              >
                 Mon compte
-              </Button>
+              </NavLinkWithDot>
               <SignOutButton />
             </>
           ) : (

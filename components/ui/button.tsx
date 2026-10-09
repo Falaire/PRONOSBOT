@@ -26,13 +26,26 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   href?: string;
 };
 
-export function Button({ variant = "primary", size = "md", className, href, children, ...props }: Props) {
-  const classes = cn(
+/** Classes du bouton, réutilisables sur un lien/élément personnalisé (ex: lien avec point de notification). */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+} = {}): string {
+  return cn(
     "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0",
     variantClasses[variant],
     sizeClasses[size],
     className
   );
+}
+
+export function Button({ variant = "primary", size = "md", className, href, children, ...props }: Props) {
+  const classes = buttonClasses({ variant, size, className });
 
   if (href) {
     return (
