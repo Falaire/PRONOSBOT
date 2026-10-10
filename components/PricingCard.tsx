@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatFcfa } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BorderTrail } from "@/components/motion/border-trail";
 
 export type PricingPlan = {
   code: string;
@@ -33,6 +34,14 @@ export function PricingCard({ plan, currentPlanCode = null }: { plan: PricingPla
               "border-accent-500/40 ring-1 ring-accent-500/30 bg-gradient-to-b from-accent-500/[0.06] to-transparent"
       )}
     >
+      {(isCurrent || plan.highlighted) && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden>
+          <BorderTrail
+            size={isCurrent ? 72 : 56}
+            className={isCurrent ? "bg-brand-400 shadow-glow" : "bg-accent-400 shadow-glow-accent"}
+          />
+        </div>
+      )}
       {isCurrent ? (
         <Badge tone="brand" className="absolute -top-3 left-1/2 -translate-x-1/2 shadow-glow">
           ✓ Ton plan actuel

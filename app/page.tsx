@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { PricingCard } from "@/components/PricingCard";
 import { MatchCard } from "@/components/MatchCard";
 import { FAQ } from "@/components/FAQ";
+import { TextEffect } from "@/components/motion/text-effect";
+import { AnimatedGroup } from "@/components/motion/animated-group";
+import { InView } from "@/components/motion/in-view";
+import { BorderTrail } from "@/components/motion/border-trail";
 import { DEMO_FIXTURES } from "@/lib/demo-data";
 import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
 import { APP_NAME, APP_NAME_FULL } from "@/lib/brand";
@@ -106,11 +110,10 @@ export default function LandingPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold text-brand-400 mb-6 animate-fade-up">
               🌍 Conçu pour l&apos;Afrique de l&apos;Ouest et Centrale
             </span>
-            <h1
-              className="text-4xl sm:text-6xl font-extrabold leading-[1.08] text-white tracking-tight animate-fade-up"
-              style={{ animationDelay: "80ms" }}
-            >
-              Les pronostics foot par
+            <h1 className="text-4xl sm:text-6xl font-extrabold leading-[1.08] text-white tracking-tight">
+              <TextEffect as="span" per="word" preset="fade-in-blur" speedReveal={1.6} className="block sm:inline">
+                Les pronostics foot par
+              </TextEffect>
               <br className="hidden sm:block" />{" "}
               <span className="bg-gradient-to-r from-brand-400 via-brand-500 to-accent-500 bg-clip-text text-transparent">
                 Intelligence Artificielle
@@ -164,6 +167,7 @@ export default function LandingPage() {
 
         {/* COMMENT ÇA MARCHE */}
         <section className="mx-auto max-w-6xl px-4 py-14">
+          <InView viewOptions={{ once: true }} once variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } }}>
           <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 relative">
             <div className="hidden sm:block absolute top-7 left-[16.6%] right-[16.6%] h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
             {STEPS.map(({ icon: Icon, title, desc }, i) => (
@@ -179,10 +183,12 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          </InView>
         </section>
 
         {/* MATCHS DU JOUR (aperçu) */}
         <section className="mx-auto max-w-6xl px-4 py-10">
+          <InView viewOptions={{ once: true }} once variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
           <div className="flex items-center justify-between mb-5">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-white">Pronostics du jour</h2>
@@ -192,20 +198,23 @@ export default function LandingPage() {
               Voir tout <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          </InView>
+          <AnimatedGroup preset="blur-slide" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {DEMO_FIXTURES.slice(0, 3).map((f) => (
               <MatchCard key={f.id} fixture={f} locked={!f.free} />
             ))}
-          </div>
+          </AnimatedGroup>
         </section>
 
         {/* FEATURES */}
         <section className="mx-auto max-w-6xl px-4 py-14">
-          <div className="text-center mb-10">
-            <Badge tone="brand" className="mb-3">Pourquoi KickPredict</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce qu'il faut, rien de superflu</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <InView viewOptions={{ once: true }} once variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
+            <div className="text-center mb-10">
+              <Badge tone="brand" className="mb-3">Pourquoi KickPredict</Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce qu'il faut, rien de superflu</h2>
+            </div>
+          </InView>
+          <AnimatedGroup preset="blur-slide" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <Card key={title} variant="glow">
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 mb-4">
@@ -215,26 +224,29 @@ export default function LandingPage() {
                 <p className="text-sm text-white/55 leading-relaxed">{desc}</p>
               </Card>
             ))}
-          </div>
+          </AnimatedGroup>
         </section>
 
         {/* PRICING */}
         <section id="pricing" className="mx-auto max-w-6xl px-4 py-16">
-          <div className="text-center mb-10">
-            <Badge tone="accent" className="mb-3">Tarifs</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white">Un abonnement en FCFA, sans surprise</h2>
-            <p className="text-white/55 mt-2 text-sm">Paiement Mobile Money instantané — T-Money & Flooz</p>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <InView viewOptions={{ once: true }} once variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
+            <div className="text-center mb-10">
+              <Badge tone="accent" className="mb-3">Tarifs</Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white">Un abonnement en FCFA, sans surprise</h2>
+              <p className="text-white/55 mt-2 text-sm">Paiement Mobile Money instantané — T-Money & Flooz</p>
+            </div>
+          </InView>
+          <AnimatedGroup preset="slide" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {PLANS.map((p) => (
               <PricingCard key={p.code} plan={p} />
             ))}
-          </div>
+          </AnimatedGroup>
         </section>
 
         {/* WHATSAPP CTA */}
         <section className="mx-auto max-w-4xl px-4 pb-16">
-          <Card className="flex flex-col sm:flex-row items-center justify-between gap-5 bg-gradient-to-br from-brand-500/15 via-white/[0.03] to-transparent border-brand-500/25">
+          <Card className="relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-5 bg-gradient-to-br from-brand-500/15 via-white/[0.03] to-transparent border-brand-500/25">
+            <BorderTrail size={90} />
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500/15 border border-brand-500/25 shrink-0">
                 <MessageCircle className="w-6 h-6 text-brand-400" />
@@ -266,6 +278,7 @@ export default function LandingPage() {
             className="relative overflow-hidden text-center py-14 px-6 bg-gradient-to-br from-brand-500/15 via-ink-900 to-accent-500/10 border-brand-500/25"
           >
             <div className="absolute inset-0 opacity-30 bg-dot-grid [mask-image:radial-gradient(circle,black,transparent_70%)]" aria-hidden />
+            <BorderTrail size={140} />
             <div className="relative">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
                 Prêt à parier plus intelligemment ?

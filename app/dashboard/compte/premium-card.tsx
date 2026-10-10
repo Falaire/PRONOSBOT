@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TextShimmer } from "@/components/motion/text-shimmer";
 import { Sparkles } from "lucide-react";
 
 const PLAN_LABELS: Record<string, string> = {
@@ -35,9 +36,9 @@ export function PremiumCard({
           <Sparkles className="w-5 h-5 text-accent-500" />
         </span>
         <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-white text-lg">
-            Merci{firstName ? ` ${firstName}` : ""}, tu es Premium ✨
-          </h2>
+          <TextShimmer as="h2" duration={2.4} className="font-bold text-lg">
+            {`Merci${firstName ? ` ${firstName}` : ""}, tu es Premium ✨`}
+          </TextShimmer>
           <p className="text-sm text-white/70 mt-1">
             {planLabel && <>Plan <span className="font-semibold text-white">{planLabel}</span> · </>}
             {days > 0 ? (

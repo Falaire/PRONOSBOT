@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatFcfa } from "@/lib/utils";
 import { Smartphone, MessageCircle, CheckCircle2 } from "lucide-react";
+import { AnimatedBackground } from "@/components/motion/animated-background";
 
 type Plan = { code: string; name: string; priceFcfa: number };
 
@@ -120,21 +121,30 @@ export function ManualPaymentPanel({
           <div>
             <label className="text-sm text-white/70">Opérateur utilisé</label>
             <div className="mt-1 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setOperator("tmoney")}
-                className={`rounded-lg border px-3 py-2 text-sm font-semibold ${operator === "tmoney" ? "border-brand-500 bg-brand-500/10 text-brand-400" : "border-white/15 text-white/60"}`}
+              <AnimatedBackground
+                defaultValue={operator}
+                onValueChange={(id) => {
+                  if (id === "tmoney" || id === "flooz") setOperator(id);
+                }}
+                className="rounded-lg border border-brand-500/40 bg-brand-500/10"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
               >
-                T-Money
-              </button>
-              <button
-                type="button"
-                disabled={!floozAvailable}
-                onClick={() => setOperator("flooz")}
-                className={`rounded-lg border px-3 py-2 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${operator === "flooz" ? "border-brand-500 bg-brand-500/10 text-brand-400" : "border-white/15 text-white/60"}`}
-              >
-                Flooz {!floozAvailable && "(bientôt)"}
-              </button>
+                <button
+                  data-id="tmoney"
+                  type="button"
+                  className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white/60 justify-center data-[checked=true]:text-brand-400 transition-colors"
+                >
+                  T-Money
+                </button>
+                <button
+                  data-id="flooz"
+                  type="button"
+                  disabled={!floozAvailable}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white/60 justify-center data-[checked=true]:text-brand-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Flooz {!floozAvailable && "(bientôt)"}
+                </button>
+              </AnimatedBackground>
             </div>
             {!floozAvailable && (
               <p className="text-[11px] text-white/40 mt-1">

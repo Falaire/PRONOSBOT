@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WhatsAppBubble } from "@/components/WhatsAppBubble";
 import { PwaRegister } from "@/components/PwaRegister";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 import { APP_NAME, APP_NAME_FULL } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className="dark">
       <body className="min-h-screen flex flex-col font-sans">
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <WhatsAppBubble />
         <PwaRegister />
       </body>
