@@ -106,6 +106,10 @@ export default function LandingPage() {
         {/* HERO */}
         <section className="relative overflow-hidden bg-aurora">
           <div className="absolute inset-0 opacity-40 bg-dot-grid [mask-image:linear-gradient(to_bottom,black,transparent)]" aria-hidden />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-40 sm:h-56 bg-[url(/motifs/hero-waves.svg)] bg-cover bg-bottom bg-no-repeat"
+            aria-hidden
+          />
           <div className="relative mx-auto max-w-6xl px-4 pt-16 sm:pt-24 pb-20 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold text-brand-400 mb-6 animate-fade-up">
               🌍 Conçu pour l&apos;Afrique de l&apos;Ouest et Centrale
@@ -278,6 +282,7 @@ export default function LandingPage() {
             className="relative overflow-hidden text-center py-14 px-6 bg-gradient-to-br from-brand-500/15 via-ink-900 to-accent-500/10 border-brand-500/25"
           >
             <div className="absolute inset-0 opacity-30 bg-dot-grid [mask-image:radial-gradient(circle,black,transparent_70%)]" aria-hidden />
+            <div className="pointer-events-none absolute inset-0 bg-[url(/motifs/cta-blobs.svg)] bg-cover bg-center opacity-80" aria-hidden />
             <BorderTrail size={140} />
             <div className="relative">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
