@@ -9,6 +9,7 @@ import { TextEffect } from "@/components/motion/text-effect";
 import { AnimatedGroup } from "@/components/motion/animated-group";
 import { InView } from "@/components/motion/in-view";
 import { BorderTrail } from "@/components/motion/border-trail";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 import { DEMO_FIXTURES } from "@/lib/demo-data";
 import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
 import { APP_NAME, APP_NAME_FULL } from "@/lib/brand";
@@ -98,9 +99,31 @@ const PLANS = [
   { code: "annuel", name: "Annuel", priceFcfa: 25000, durationDays: 365, perMonthFcfa: 2083, features: ["Tout Trimestriel", "-30% vs mensuel", "2 mois offerts"] },
 ];
 
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      name: APP_NAME_FULL,
+      url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+      inLanguage: "fr",
+    },
+    {
+      "@type": "Organization",
+      name: APP_NAME_FULL,
+      url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+      logo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/icons/icon-512.png`,
+    },
+  ],
+};
+
 export default function LandingPage() {
   return (
-    <>
+    <MotionProvider>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+      />
       <Navbar />
       <main className="flex-1">
         {/* HERO */}
@@ -315,6 +338,6 @@ export default function LandingPage() {
       <footer className="border-t border-white/[0.08] py-8 text-center text-xs text-white/35">
         © {new Date().getFullYear()} {APP_NAME_FULL} — basé à Lomé, Togo 🇹🇬
       </footer>
-    </>
+    </MotionProvider>
   );
 }
