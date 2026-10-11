@@ -1,53 +1,57 @@
-# PoseTrace
+# PoseTrace Studio
 
-PoseTrace transforme une vidéo locale en animation verticale directement dans le navigateur. Les vidéos, personnages, décors et pistes audio ne sont pas envoyés à un serveur.
+PoseTrace Studio transforme une vidéo en animation de deux façons : un rendu vectoriel local déterministe, ou un mode vidéo-à-vidéo distant via MuAPI. La structure sépare la page Next.js, le studio, son catalogue de modèles et ses adaptateurs de fournisseurs pour préparer une intégration dans un studio multi-outils tel que [Open-Generative-AI](https://github.com/Anil-matcha/Open-Generative-AI).
 
-## Fonctionnalités actuelles
+## Deux pipelines
 
-- Import local MP4, WebM ou MOV avec glisser-déposer.
-- Détection d'une personne par MediaPipe Pose Landmarker, exécuté côté navigateur (GPU puis repli CPU).
-- **Cartoon dessiné** : corps articulé d'après les repères de pose, visage à contour, yeux, sourcils, cravate et bouche réagissant au niveau sonore.
-- **Mes images** : personnage PNG transparent et décor image importés par l'utilisateur ; cadrage et taille du personnage suivent les repères détectés.
-- Fond uni, vidéo recadrée, salle de classe dessinée en Canvas ou image de décor.
-- Rendu Canvas 1080 × 1920 (9:16) et capture avec MediaRecorder. Le navigateur choisit WebM ou MP4 lorsqu'il le prend en charge ; WebM est généralement utilisé sous Chrome.
-- La capture audio locale est incluse si le navigateur prend en charge la combinaison audio/vidéo MediaRecorder.
+### Studio vectoriel local — mode par défaut
 
-## Installation
+- Import local MP4, WebM ou MOV; aucune vidéo, image ou piste audio n’est téléversée.
+- MediaPipe Pose détecte jusqu’à deux personnes; `PoseTrackManager` associe les détections aux IDs, lisse la pose et prédit brièvement les occultations.
+- Rendu Canvas 1080 × 1920 (9:16), papier clair et traits sombres; variantes foulard/lunettes par ID.
+- Capture à 30 fps par `MediaRecorder`; codecs et audio dépendent du navigateur.
+
+### Studio vidéo-à-vidéo MuAPI — mode distant optionnel
+
+- Modèle V2V `runway-aleph-v2v` et consigne de transformation, avec ratio 9:16 demandé.
+- La clé MuAPI est saisie dans l’interface et gardée uniquement en mémoire pendant la session; elle n’est pas envoyée au serveur PoseTrace/Vercel.
+- Le bouton de préflight vérifie d’abord le devis et le solde, **sans téléverser la vidéo**. Il faut ensuite lire le devis, autoriser l’envoi vidéo/audio et confirmer l’usage d’un compte à crédits gratuits avant de pouvoir lancer le téléversement.
+- Le média est envoyé directement de l’appareil à MuAPI. Si le devis, le solde ou leurs devises sont illisibles, le traitement s’arrête avant l’upload. Le fichier distant est limité à 100 Mo.
+- Ce chemin n’utilise pas le tracker local à deux personnes : le modèle traite la vidéo entière comme une seule entrée. Il est génératif; fidélité des personnes, audio de sortie, ratio, résolution et stabilité temporelle ne sont pas garantis comme dans le rendu vectoriel.
+
+**La confirmation « crédits gratuits » n’est pas une garantie de facturation de MuAPI.** Utiliser un compte sans paiement automatique ni solde payant; le fournisseur reste responsable du solde et des règles de facturation. Ne jamais coller une clé dans un message ou la committer.
+
+## Architecture
+
+```text
+app/page.tsx                              # route Next.js, très mince
+features/posetrace/PoseTraceStudio.tsx    # orchestrateur du studio et pipeline local
+features/posetrace/components/            # panneaux du studio
+features/posetrace/models.ts              # catalogue V2V ciblé
+features/posetrace/providers/muapi.ts     # devis, solde, upload, génération et polling
+lib/tracking/pose-tracker.ts              # suivi local de deux pistes
+lib/rendering/pose-renderer.ts             # retargeting et dessin Canvas
+```
+
+Le code est organisé en adaptateur fournisseur + studio pour faciliter un portage ultérieur. Cette branche prépare une intégration, mais **ne modifie pas le dépôt amont Open-Generative-AI** et n’en importe pas sa grande base de code.
+
+## Lancer et vérifier
 
 ```bash
-npm install
+npm ci
 npm run dev
-```
-
-Ouvrir http://localhost:3000. Pour vérifier une compilation de production :
-
-```bash
+npm test
 npm run build
-npm start
 ```
 
-Le moteur MediaPipe et son modèle sont téléchargés à la première analyse depuis jsDelivr et Google Storage. Aucun contenu utilisateur n'est envoyé à ces hôtes ; seuls les fichiers de bibliothèque et le modèle sont chargés.
+Le premier usage local télécharge MediaPipe/WASM et le modèle de pose depuis leurs CDN. Seuls les modèles nécessaires au navigateur sont chargés; la vidéo utilisateur reste locale dans le mode vectoriel.
 
-## Utilisation
+## Limites
 
-1. Importer une vidéo contenant une personne visible.
-2. Choisir **Cartoon dessiné** ou **Mes images**.
-3. En mode **Mes images**, fournir un PNG transparent du personnage ; le décor est facultatif.
-4. Choisir un fond, ajuster le lissage et les dimensions visuelles, puis cliquer sur **Générer l'animation**.
-5. Prévisualiser et télécharger le résultat.
+- Le tracker local n’est pas une ré-identification : croisements, occultations longues, sorties de cadre et changements de plan peuvent échanger ou recréer un ID.
+- Les accessoires automatiques sont assignés par ID, pas reconnus sur les personnes filmées.
+- Le PNG personnalisé du mode local est un sprite complet, pas un rig articulé.
+- Le V2V MuAPI reçoit la vidéo entière, audio inclus; stockage, conservation et effacement dépendent du fournisseur. Le préflight et la compatibilité réelle de l’API n’ont pas été validés avec une clé MuAPI, aucun appel live n’a été fait.
+- MediaRecorder en local capture en temps réel; l’alignement exact des PTS et de l’audio reste à valider sur des vidéos réelles.
 
-## Limites actuelles — à lire avant usage
-
-- Le modèle détecte une seule personne.
-- Le mode **Mes images** déplace, redimensionne et incline légèrement le PNG entier. Un fichier PNG unique ne permet pas de plier les bras et les jambes séparément ; un rig articulé d'images découpées n'est pas encore pris en charge.
-- La bouche du cartoon suit l'intensité sonore, pas encore les phonèmes ni les mots.
-- La transcription Whisper, les sous-titres, la traduction anglaise et la conversion ffmpeg.wasm vers MP4 ne sont pas encore branchés à l'interface.
-- L'export est en temps réel : une vidéo d'une minute prend environ une minute, et les longues vidéos peuvent utiliser beaucoup de mémoire.
-- Le fonctionnement dépend du téléchargement initial du modèle MediaPipe et des capacités de l'appareil.
-- La prise en charge de l'audio et du format MP4 dépend du navigateur ; le site affiche un statut si l'audio n'est pas supporté.
-
-## Vercel
-
-Projet Next.js compatible avec Vercel Hobby : commande de build `npm run build`, sortie Next.js automatique, Node 18 ou supérieur. Aucune variable d'environnement n'est nécessaire pour PoseTrace.
-
-Le travail PoseTrace est développé sur la branche `arena/76ff3434-pronosbot`. Ne pas fusionner la PR PoseTrace dans `main` tant que le projet d'origine KickPredict utilise encore ce dépôt.
+L’analyse de l’architecture cible, des formats de données et des étapes se trouve dans [`docs/posetrace-v1-architecture.md`](docs/posetrace-v1-architecture.md).

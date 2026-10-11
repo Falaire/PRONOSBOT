@@ -5,8 +5,8 @@
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #080a0d; color: #f5f3ee; font-family: Arial, Helvetica, sans-serif; }
-button, input, select { font: inherit; }
-button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #d9f36a; outline-offset: 3px; }
+button, input, select, textarea { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid #d9f36a; outline-offset: 3px; }
 .app-shell { max-width: 1180px; margin: auto; padding: 28px 32px 22px; }
 .app-shell header { display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; letter-spacing: 3px; font-weight: 800; }
@@ -41,6 +41,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .controls-heading > span { margin-left: auto; font-size: 9px; letter-spacing: 1px; color: #67705f; }
 .secondary-heading { margin-top: 20px; padding-bottom: 12px; }
 .mode-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 16px; }
+.workflow-picker { margin-bottom: 14px; }
+.remote-panel { margin-top: 14px; padding: 18px; border: 1px solid #343d2b; border-radius: 12px; background: linear-gradient(145deg, #11160f, #10120f 62%); }
+.remote-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid #293026; }
+.remote-panel-title > div { display: grid; gap: 5px; }
+.remote-panel-title strong { font-size: 13px; }
+.remote-panel-title small { color: #8b9286; font-size: 10px; }
+.remote-badge { color: #e2bd74; border: 1px solid #6b5834; border-radius: 20px; padding: 4px 8px; font-size: 9px; letter-spacing: 1px; }
+.remote-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.remote-fields label { display: grid; gap: 7px; min-width: 0; color: #adb3a9; font-size: 10px; }
+.remote-fields input, .remote-fields select, .remote-fields textarea { width: 100%; min-width: 0; border: 1px solid #343b31; border-radius: 6px; background: #0b0e0b; color: #e5e8e1; padding: 9px 10px; font-size: 11px; }
+.remote-fields textarea { resize: vertical; line-height: 1.5; }
+.remote-fields input:disabled, .remote-fields select:disabled, .remote-fields textarea:disabled { opacity: .6; }
+.remote-prompt { grid-column: 1 / -1; }
+.remote-notice { margin-top: 13px; padding: 12px; border: 1px solid #514632; border-radius: 7px; background: #211d14; color: #cfc7a9; font-size: 10px; line-height: 1.55; }
+.remote-notice strong { color: #ead49c; }
+.remote-notice p { margin: 6px 0 0; }
+.remote-check { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; color: #c4cabe; font-size: 10px; line-height: 1.5; }
+.remote-check input { flex: 0 0 auto; margin: 2px 0 0; accent-color: #d9f36a; }
+.remote-preflight-button { margin-top: 14px; border: 1px solid #56683c; border-radius: 6px; padding: 9px 12px; background: #192114; color: #d9f36a; font-size: 10px; cursor: pointer; }
+.remote-preflight-button:disabled { opacity: .45; cursor: not-allowed; }
+.remote-estimate { margin-top: 13px; color: #aab49b; font-size: 10px; }
+.remote-estimate strong { color: #d9f36a; }
+.remote-output-placeholder { display: grid; gap: 12px; place-items: center; max-width: 220px; padding: 20px; color: #878e80; text-align: center; font-size: 11px; line-height: 1.5; }
+.remote-output-placeholder svg { color: #d9f36a; }
 .mode-card { display: flex; gap: 12px; align-items: center; text-align: left; min-height: 78px; padding: 13px 14px; color: #f5f3ee; background: #171a16; border: 1px solid #30362c; border-radius: 10px; cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
 .mode-card:hover:not(:disabled) { border-color: #879945; transform: translateY(-1px); }
 .mode-card.selected { background: #1c2415; border-color: #d9f36a; box-shadow: 0 0 0 1px rgba(217, 243, 106, .12) inset; }
@@ -96,7 +120,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   .previews { grid-template-columns: 1fr; }
   .media { height: 280px; }
   .controls { padding: 15px; }
-  .mode-picker, .asset-grid { grid-template-columns: 1fr; }
+  .mode-picker, .asset-grid, .remote-fields { grid-template-columns: 1fr; }
+  .remote-prompt { grid-column: auto; }
+  .remote-panel { padding: 13px; }
   .asset-note { grid-column: auto; }
   .control-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
   .wide { grid-column: span 2; }

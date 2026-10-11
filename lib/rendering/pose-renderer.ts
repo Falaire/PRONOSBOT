@@ -5,6 +5,7 @@ export type PoseRendererSettings = {
   characterScale: number;
   characterOffsetX: number;
   characterOffsetY: number;
+  accessory?: "scarf" | "glasses" | "none";
 };
 
 export type SceneTransform = { scale: number; offsetX: number; offsetY: number };
@@ -38,6 +39,106 @@ export function createSceneTransform(
     offsetX: canvasWidth / 2 - centerX * videoWidth * scale,
     offsetY: canvasHeight / 2 - centerY * videoHeight * scale,
   };
+}
+
+/** Cadre un groupe de personnes sans changer le cadrage au fil des images. */
+export function createMultiPoseTransform(
+  videoWidth: number,
+  videoHeight: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  poses: LandmarkPoint[][]
+): SceneTransform {
+  const visible = poses.flat().filter((p) => p && (p.visibility ?? 1) >= 0.2);
+  if (!visible.length) return createSceneTransform(videoWidth, videoHeight, canvasWidth, canvasHeight, []);
+
+  const minX = Math.min(...visible.map((p) => p.x));
+  const maxX = Math.max(...visible.map((p) => p.x));
+  const minY = Math.min(...visible.map((p) => p.y));
+  const maxY = Math.max(...visible.map((p) => p.y));
+  const boxWidth = Math.max(0.08, maxX - minX);
+  const boxHeight = Math.max(0.16, maxY - minY);
+  const fitWidth = canvasWidth * 0.88 / (boxWidth * videoWidth);
+  const fitHeight = canvasHeight * 0.82 / (boxHeight * videoHeight);
+  const minimumCover = Math.max(canvasWidth / videoWidth, canvasHeight / videoHeight);
+  const scale = Math.min(Math.min(fitWidth, fitHeight), minimumCover * 2.5);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  return {
+    scale,
+    offsetX: canvasWidth / 2 - centerX * videoWidth * scale,
+    offsetY: canvasHeight * 0.49 - centerY * videoHeight * scale,
+  };
+}
+
+export type PoseScaleReference = { bodyHeight: number; headRadius: number; topY: number };
+
+export function estimatePoseScaleReference(
+  landmarks: LandmarkPoint[],
+  videoWidth: number,
+  videoHeight: number
+): PoseScaleReference {
+  const visiblePoint = (index: number) => {
+    const candidate = point(landmarks, index);
+    return candidate && (candidate.visibility ?? 1) > 0.18 ? candidate : undefined;
+  };
+  const nose = visiblePoint(0), leftEar = visiblePoint(7), rightEar = visiblePoint(8);
+  const ankles = [visiblePoint(27), visiblePoint(28)].filter((p) => p);
+  const knees = [point(landmarks, 25), point(landmarks, 26)].filter((p) => p && (p.visibility ?? 1) > 0.18);
+  const hips = [point(landmarks, 23), point(landmarks, 24)].filter((p) => p && (p.visibility ?? 1) > 0.18);
+  const earSpan = nose && leftEar && rightEar
+    ? Math.hypot((rightEar.x - leftEar.x) * videoWidth, (rightEar.y - leftEar.y) * videoHeight)
+    : videoHeight * 0.08;
+  const headRadius = earSpan * 0.78;
+  const topY = nose ? nose.y * videoHeight - headRadius : 0;
+  const feet = ankles.length ? ankles : knees;
+  const bottomY = feet.length
+    ? Math.max(...feet.map((p) => p!.y * videoHeight))
+    : hips.length
+      ? Math.max(...hips.map((p) => p!.y * videoHeight)) + videoHeight * 0.2
+      : videoHeight;
+  return { bodyHeight: Math.max(videoHeight * 0.2, bottomY - topY), headRadius, topY };
+}
+
+/**
+ * Retargete un squelette source vers un emplacement de composition vertical.
+ * Les deux intervenants gagnent ainsi une taille lisible même si la vidéo source est horizontale.
+ */
+export function retargetPoseToSlot(
+  landmarks: LandmarkPoint[],
+  videoWidth: number,
+  videoHeight: number,
+  canvasWidth: number,
+  canvasHeight: number,
+  slot: number,
+  personCount: number,
+  anchorCenterX: number,
+  reference?: PoseScaleReference,
+  slotCenterNormalized?: number
+): LandmarkPoint[] {
+  const shoulderAndHip = [11, 12, 23, 24].map((index) => point(landmarks, index)).filter((p) => p && (p.visibility ?? 1) > 0.18);
+  const rootX = shoulderAndHip.length
+    ? shoulderAndHip.reduce((sum, p) => sum + p.x, 0) / shoulderAndHip.length
+    : anchorCenterX;
+
+  const metrics = reference ?? estimatePoseScaleReference(landmarks, videoWidth, videoHeight);
+  const sourceHeight = metrics.bodyHeight;
+  const targetHeight = canvasHeight * 0.66;
+  const scale = clamp(targetHeight / sourceHeight, 0.1, 8);
+  const targetTop = canvasHeight * 0.14;
+  const targetCenterX = canvasWidth * clamp(
+    slotCenterNormalized ?? (personCount > 1 ? (slot === 0 ? 0.24 : 0.76) : 0.5),
+    0.12,
+    0.88,
+  );
+  const movement = clamp((rootX - anchorCenterX) * videoWidth * scale, -canvasWidth * 0.10, canvasWidth * 0.10);
+  const rootSourceX = rootX * videoWidth;
+
+  return landmarks.map((p) => ({
+    ...p,
+    x: targetCenterX + movement + (p.x * videoWidth - rootSourceX) * scale,
+    y: targetTop + (p.y * videoHeight - metrics.topY) * scale,
+  }));
 }
 
 export function mapPoseToCanvas(
@@ -76,7 +177,6 @@ function drawDesk(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#39414a";
   ctx.lineWidth = 12;
-  // Table top in slight perspective.
   ctx.beginPath();
   ctx.moveTo(-100, 0); ctx.lineTo(94, -8); ctx.lineTo(128, 27); ctx.lineTo(-77, 38); ctx.closePath();
   ctx.fillStyle = "#edc98a"; ctx.fill(); ctx.stroke();
@@ -84,7 +184,6 @@ function drawDesk(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
   ctx.beginPath(); ctx.moveTo(-77, 38); ctx.lineTo(128, 27); ctx.stroke();
   ctx.strokeStyle = "#4d5965"; ctx.lineWidth = 13;
   ctx.beginPath(); ctx.moveTo(-62, 39); ctx.lineTo(-70, 150); ctx.moveTo(105, 30); ctx.lineTo(117, 140); ctx.stroke();
-  // A simple chair, tucked beside the desk.
   ctx.fillStyle = "#74b8d1"; ctx.strokeStyle = "#46535e"; ctx.lineWidth = 9;
   roundedRect(ctx, -160, 67, 73, 70, 12); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-151, 137); ctx.lineTo(-155, 205); ctx.moveTo(-99, 137); ctx.lineTo(-95, 202); ctx.stroke();
@@ -97,7 +196,6 @@ export function drawClassroomBackdrop(ctx: CanvasRenderingContext2D, width: numb
   const wall = ctx.createLinearGradient(0, 0, 0, wallEnd);
   wall.addColorStop(0, "#faf8ef"); wall.addColorStop(1, "#e7e2d2");
   ctx.fillStyle = wall; ctx.fillRect(0, 0, width, height);
-  // Mur, plinthe et plancher chaud.
   ctx.fillStyle = "#fffdf5"; ctx.fillRect(0, wallEnd - 26, width, 28);
   ctx.fillStyle = "#b58455"; ctx.fillRect(0, wallEnd, width, 20);
   const floor = ctx.createLinearGradient(0, wallEnd + 15, 0, height);
@@ -111,8 +209,6 @@ export function drawClassroomBackdrop(ctx: CanvasRenderingContext2D, width: numb
   for (let column = -2; column < 9; column++) {
     ctx.beginPath(); ctx.moveTo(width * column / 7, wallEnd + 20); ctx.lineTo(width * (column + 1) / 6, height); ctx.stroke();
   }
-
-  // Fenêtre à gauche avec vue stylisée.
   ctx.fillStyle = "#d8e2dc"; ctx.strokeStyle = "#342f29"; ctx.lineWidth = 15;
   ctx.fillRect(width * 0.045, height * 0.13, width * 0.18, height * 0.23);
   ctx.strokeRect(width * 0.045, height * 0.13, width * 0.18, height * 0.23);
@@ -120,8 +216,6 @@ export function drawClassroomBackdrop(ctx: CanvasRenderingContext2D, width: numb
   ctx.strokeStyle = "#fffdf5"; ctx.lineWidth = 12;
   ctx.beginPath(); ctx.moveTo(width * 0.135, height * 0.15); ctx.lineTo(width * 0.135, height * 0.34); ctx.moveTo(width * 0.06, height * 0.245); ctx.lineTo(width * 0.21, height * 0.245); ctx.stroke();
   ctx.fillStyle = "#f2efe6"; ctx.fillRect(width * 0.02, height * 0.36, width * 0.23, 18);
-
-  // Tableau vert à cadre bois.
   const boardX = width * 0.255, boardY = height * 0.145, boardW = width * 0.69, boardH = height * 0.265;
   ctx.fillStyle = "#825233"; ctx.strokeStyle = "#37291f"; ctx.lineWidth = 12;
   roundedRect(ctx, boardX, boardY, boardW, boardH, 8); ctx.fill(); ctx.stroke();
@@ -131,27 +225,19 @@ export function drawClassroomBackdrop(ctx: CanvasRenderingContext2D, width: numb
     ctx.beginPath(); ctx.moveTo(boardX + 40, boardY + 45 + i * 43); ctx.lineTo(boardX + boardW - 38, boardY + 40 + i * 43); ctx.stroke();
   }
   ctx.fillStyle = "#f6f0d6"; ctx.font = `italic 34px Georgia, serif`; ctx.textAlign = "left";
-  ctx.fillText("A + B = C", boardX + 55, boardY + 100);
-  ctx.fillText("A + B = C", boardX + 55, boardY + 150);
+  ctx.fillText("A + B = C", boardX + 55, boardY + 100); ctx.fillText("A + B = C", boardX + 55, boardY + 150);
   ctx.textAlign = "center"; ctx.font = `bold 58px Arial, sans-serif`;
   ctx.fillText("STICKMAN", boardX + boardW * 0.62, boardY + boardH * 0.60);
-  // Craie / plateau du tableau.
   ctx.fillStyle = "#d6b17a"; ctx.fillRect(boardX + 20, boardY + boardH - 21, boardW - 40, 16);
   ctx.fillStyle = "#f6f0d6"; ctx.fillRect(boardX + boardW * 0.58, boardY + boardH - 29, 60, 8);
-
-  // Porte latérale, en partie derrière le mobilier.
   ctx.fillStyle = "#b67c45"; ctx.strokeStyle = "#44342a"; ctx.lineWidth = 11;
   ctx.fillRect(width * 0.02, height * 0.39, width * 0.20, height * 0.27);
   ctx.strokeRect(width * 0.02, height * 0.39, width * 0.20, height * 0.27);
   ctx.fillStyle = "#d7e7e4"; ctx.fillRect(width * 0.055, height * 0.42, width * 0.13, height * 0.13);
   ctx.strokeStyle = "#6f7771"; ctx.lineWidth = 5; ctx.strokeRect(width * 0.055, height * 0.42, width * 0.13, height * 0.13);
   ctx.beginPath(); ctx.arc(width * 0.19, height * 0.55, 9, 0, Math.PI * 2); ctx.fillStyle = "#f0d59b"; ctx.fill();
-
-  // Bureaux d'élèves placés sur les côtés, laissant une zone claire au centre.
-  drawDesk(ctx, width * 0.18, height * 0.60, 0.72);
-  drawDesk(ctx, width * 0.87, height * 0.61, 0.72);
-  drawDesk(ctx, width * 0.17, height * 0.80, 0.94);
-  drawDesk(ctx, width * 0.88, height * 0.79, 0.94);
+  drawDesk(ctx, width * 0.18, height * 0.60, 0.72); drawDesk(ctx, width * 0.87, height * 0.61, 0.72);
+  drawDesk(ctx, width * 0.17, height * 0.80, 0.94); drawDesk(ctx, width * 0.88, height * 0.79, 0.94);
 }
 
 function drawBone(ctx: CanvasRenderingContext2D, a: LandmarkPoint, b: LandmarkPoint, width: number, color: string) {
@@ -171,9 +257,26 @@ function drawTorso(ctx: CanvasRenderingContext2D, pose: LandmarkPoint[], color: 
   const leftShoulder = point(pose, 11), rightShoulder = point(pose, 12);
   const leftHip = point(pose, 23), rightHip = point(pose, 24);
   if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) return;
+  const shoulderCenter = { x: (leftShoulder.x + rightShoulder.x) / 2, y: (leftShoulder.y + rightShoulder.y) / 2 };
+  const hipCenter = { x: (leftHip.x + rightHip.x) / 2, y: (leftHip.y + rightHip.y) / 2 };
+  const shoulderWidth = Math.hypot(rightShoulder.x - leftShoulder.x, rightShoulder.y - leftShoulder.y);
+  const hipWidth = Math.hypot(rightHip.x - leftHip.x, rightHip.y - leftHip.y);
+  // Silhouette en courbes, avec épaules et taille arrondies : pas un quadrilatère brut.
   ctx.beginPath();
-  ctx.moveTo(leftShoulder.x, leftShoulder.y); ctx.lineTo(rightShoulder.x, rightShoulder.y);
-  ctx.lineTo(rightHip.x, rightHip.y); ctx.lineTo(leftHip.x, leftHip.y); ctx.closePath();
+  ctx.moveTo(leftShoulder.x, leftShoulder.y);
+  ctx.quadraticCurveTo(shoulderCenter.x, shoulderCenter.y - shoulderWidth * 0.10, rightShoulder.x, rightShoulder.y);
+  ctx.bezierCurveTo(
+    rightShoulder.x + shoulderWidth * 0.10, shoulderCenter.y + (hipCenter.y - shoulderCenter.y) * 0.34,
+    rightHip.x + hipWidth * 0.08, hipCenter.y - (hipCenter.y - shoulderCenter.y) * 0.05,
+    rightHip.x, rightHip.y,
+  );
+  ctx.quadraticCurveTo(hipCenter.x, hipCenter.y + hipWidth * 0.13, leftHip.x, leftHip.y);
+  ctx.bezierCurveTo(
+    leftHip.x - hipWidth * 0.08, hipCenter.y - (hipCenter.y - shoulderCenter.y) * 0.05,
+    leftShoulder.x - shoulderWidth * 0.10, shoulderCenter.y + (hipCenter.y - shoulderCenter.y) * 0.34,
+    leftShoulder.x, leftShoulder.y,
+  );
+  ctx.closePath();
   ctx.fillStyle = "#fffdf8"; ctx.strokeStyle = color; ctx.lineWidth = 10 * unit;
   ctx.lineJoin = "round"; ctx.fill(); ctx.stroke();
 
@@ -206,13 +309,51 @@ function drawTorso(ctx: CanvasRenderingContext2D, pose: LandmarkPoint[], color: 
   }
 }
 
+function drawNeck(ctx: CanvasRenderingContext2D, pose: LandmarkPoint[], outline: string, headScale: number) {
+  const nose = point(pose, 0), leftEar = point(pose, 7), rightEar = point(pose, 8);
+  const leftShoulder = point(pose, 11), rightShoulder = point(pose, 12);
+  if (!nose || !leftEar || !rightEar || !leftShoulder || !rightShoulder) return;
+  const radius = Math.hypot(rightEar.x - leftEar.x, rightEar.y - leftEar.y) * 0.88 * headScale;
+  const shoulderCenter = { x: (leftShoulder.x + rightShoulder.x) / 2, y: (leftShoulder.y + rightShoulder.y) / 2 };
+  const top = { x: nose.x, y: nose.y + radius * 0.68, visibility: 1 };
+  const neckWidth = Math.hypot(rightShoulder.x - leftShoulder.x, rightShoulder.y - leftShoulder.y) * 0.20;
+  drawBone(ctx, top, shoulderCenter, Math.max(15, neckWidth), outline);
+}
+
+function drawScarf(ctx: CanvasRenderingContext2D, pose: LandmarkPoint[], outline: string) {
+  const left = point(pose, 11), right = point(pose, 12);
+  if (!left || !right) return;
+  const width = Math.hypot(right.x - left.x, right.y - left.y);
+  const centerX = (left.x + right.x) / 2;
+  const centerY = (left.y + right.y) / 2 + width * 0.08;
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(left.x + (right.x - left.x) * 0.18, left.y + width * 0.05);
+  ctx.quadraticCurveTo(centerX, centerY + width * 0.1, right.x - (right.x - left.x) * 0.18, right.y + width * 0.05);
+  ctx.strokeStyle = outline; ctx.lineWidth = width * 0.20; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(left.x + (right.x - left.x) * 0.18, left.y + width * 0.05);
+  ctx.quadraticCurveTo(centerX, centerY + width * 0.1, right.x - (right.x - left.x) * 0.18, right.y + width * 0.05);
+  ctx.strokeStyle = "#d9534f"; ctx.lineWidth = width * 0.12; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(centerX - width * 0.065, centerY + width * 0.02);
+  ctx.lineTo(centerX + width * 0.075, centerY + width * 0.08);
+  ctx.lineTo(centerX + width * 0.03, centerY + width * 0.42);
+  ctx.lineTo(centerX - width * 0.07, centerY + width * 0.33);
+  ctx.closePath(); ctx.fillStyle = "#d9534f"; ctx.strokeStyle = outline;
+  ctx.lineWidth = Math.max(4, width * 0.025); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
 function drawFace(
   ctx: CanvasRenderingContext2D,
   pose: LandmarkPoint[],
   color: string,
   headScale: number,
   timeMs: number,
-  audioLevel: number
+  audioLevel: number,
+  accessory: PoseRendererSettings["accessory"]
 ) {
   const nose = point(pose, 0), leftEar = point(pose, 7), rightEar = point(pose, 8);
   if (!nose || !leftEar || !rightEar) return;
@@ -255,6 +396,16 @@ function drawFace(
     ctx.quadraticCurveTo(eyeX, browY - radius * 0.075, eyeX + eyeW * 0.78, browY - side * radius * 0.025);
     ctx.strokeStyle = color; ctx.lineWidth = Math.max(5, radius * 0.055); ctx.lineCap = "round"; ctx.stroke();
   }
+  if (accessory === "glasses") {
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = Math.max(5, radius * 0.055);
+    for (const side of [-1, 1]) {
+      const eyeX = side * radius * 0.31;
+      roundedRect(ctx, eyeX - radius * 0.22, eyeY - radius * 0.16, radius * 0.44, radius * 0.34, radius * 0.08);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(-radius * 0.05, eyeY); ctx.lineTo(radius * 0.05, eyeY); ctx.stroke();
+  }
   const mouthY = radius * 0.35;
   if (mouthOpen > 0.04) {
     ctx.beginPath(); ctx.ellipse(0, mouthY, radius * 0.2, radius * (0.035 + mouthOpen * 0.23), 0, 0, Math.PI * 2); ctx.fillStyle = "#171717"; ctx.fill();
@@ -284,8 +435,10 @@ export function drawCodeCartoon(
     drawBone(ctx, a, b, width * unit, settings.outlineColor);
     if (to === 15 || to === 16 || to === 27 || to === 28) drawJoint(ctx, b, width * unit * 0.48, settings.outlineColor);
   }
+  drawNeck(ctx, pose, settings.outlineColor, settings.headScale);
   drawTorso(ctx, pose, settings.outlineColor, unit);
-  drawFace(ctx, pose, settings.outlineColor, settings.headScale, timeMs, audioLevel);
+  if (settings.accessory === "scarf") drawScarf(ctx, pose, settings.outlineColor);
+  drawFace(ctx, pose, settings.outlineColor, settings.headScale, timeMs, audioLevel, settings.accessory);
 }
 
 export function drawTrackedCharacter(
