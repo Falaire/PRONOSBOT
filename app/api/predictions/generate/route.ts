@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { assertAdminOrCron } from "@/lib/api-auth";
 import { predictMatch, isValueBet, impliedProbability, devigProbabilities1x2 } from "@/lib/prediction/engine";
 import type { TeamInput, MatchContext } from "@/lib/prediction/types";
+import { sanitizeLeagueAvg } from "@/lib/prediction/league-average";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -103,7 +104,7 @@ async function handler(req: NextRequest) {
         injuriesImpact: Number(fxAway.injuries_impact ?? 0),
         matchesLast10Days: matchCountByTeam.get(fxAway.id) ?? 0,
       };
-      const leagueAvgGoals = Number(league?.avg_goals_per_match ?? 2.5);
+      const leagueAvgGoals = sanitizeLeagueAvg(league?.avg_goals_per_match);
 
       const ctx: MatchContext = {
         leagueAvgGoals,

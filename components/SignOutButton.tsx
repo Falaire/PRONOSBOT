@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { clearRememberCookies } from "@/lib/remember-me";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +9,8 @@ export function SignOutButton({ className }: { className?: string }) {
 
   async function handleSignOut() {
     setLoading(true);
+    // Import dynamique : Supabase n'est chargé que si l'utilisateur clique (perf).
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     await supabase.auth.signOut();
     clearRememberCookies();

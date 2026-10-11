@@ -4,6 +4,7 @@ import { PricingCard } from "@/components/PricingCard";
 import { PaymentPanel } from "./payment-panel";
 import { ManualPaymentPanel } from "./manual-payment-panel";
 import { getPaymentsProvider, MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
+import { getCurrentUserState } from "@/lib/subscription";
 
 const PLANS = [
   { code: "hebdo", name: "Hebdo", priceFcfa: 1000, durationDays: 7, features: ["Accès illimité 7 jours", "Alertes Telegram", "Idéal pour tester"] },
@@ -19,6 +20,17 @@ export default async function AbonnementPage({
 }) {
   const params = await searchParams;
   const provider = getPaymentsProvider();
+  const { planCode: currentPlanCode } = await getCurrentUserState();
+
+  // Plan affiché par défaut dans le formulaire : celui de l'URL (?plan=) s'il est valide,
+  // sinon le plan actuel de l'utilisateur (renouvellement), sinon "mensuel".
+  const isKnownPlan = (code: string | null | undefined): code is string =>
+    !!code && PLANS.some((p) => p.code === code);
+  const defaultPlan = isKnownPlan(params.plan)
+    ? params.plan
+    : isKnownPlan(currentPlanCode)
+      ? currentPlanCode
+      : "mensuel";
 
   return (
     <>
@@ -39,14 +51,14 @@ export default async function AbonnementPage({
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             {PLANS.map((p) => (
-              <PricingCard key={p.code} plan={p} />
+              <PricingCard key={p.code} plan={p} currentPlanCode={currentPlanCode} />
             ))}
           </div>
 
           {provider === "manual" ? (
-            <ManualPaymentPanel plans={PLANS} defaultPlan={params.plan ?? "mensuel"} manualInfo={MANUAL_PAYMENT_INFO} />
+            <ManualPaymentPanel plans={PLANS} defaultPlan={defaultPlan} manualInfo={MANUAL_PAYMENT_INFO} />
           ) : (
-            <PaymentPanel plans={PLANS} defaultPlan={params.plan ?? "mensuel"} />
+            <PaymentPanel plans={PLANS} defaultPlan={defaultPlan} />
           )}
         </div>
       </main>

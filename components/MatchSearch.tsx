@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, SearchX } from "lucide-react";
 import { MatchCard } from "@/components/MatchCard";
+import { AnimatedGroup } from "@/components/motion/animated-group";
 import type { DemoFixture } from "@/lib/demo-data";
 import { MANUAL_PAYMENT_INFO } from "@/lib/payments/config";
 
@@ -74,7 +75,7 @@ export function MatchSearch({
           </a>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <AnimatedGroup preset="blur-slide" className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((f) => (
             <MatchCard
               key={f.id}
@@ -84,7 +85,7 @@ export function MatchSearch({
               saved={savedSet.has(f.id)}
             />
           ))}
-        </div>
+        </AnimatedGroup>
       )}
     </div>
   );

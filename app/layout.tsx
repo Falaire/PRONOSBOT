@@ -9,6 +9,21 @@ export const metadata: Metadata = {
   description:
     "Pronostics football par intelligence artificielle (Elo + Poisson), adaptés à l'Afrique de l'Ouest et Centrale. Paiement Mobile Money, sans carte bancaire. 18+, service d'analyse statistique.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: APP_NAME_FULL,
+    title: `${APP_NAME_FULL} — Pronostics football IA en FCFA`,
+    description:
+      "Pronostics football par intelligence artificielle (Elo + Poisson), adaptés à l'Afrique de l'Ouest et Centrale. 18+, service d'analyse statistique.",
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: APP_NAME_FULL }],
+  },
+  twitter: {
+    card: "summary",
+    title: `${APP_NAME_FULL} — Pronostics football IA`,
+    description: "Pronostics football par intelligence artificielle, paiement Mobile Money.",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

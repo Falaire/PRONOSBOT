@@ -1,31 +1,23 @@
-import Link from "next/link";
-import { Home, LineChart, NotebookPen, CreditCard, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { getCurrentUserState } from "@/lib/subscription";
+import { getNavNotificationState } from "@/lib/nav-notifications";
+import { BottomNavBar, type BottomNavItem } from "@/components/BottomNavBar";
 
-export function BottomNav() {
-  const items = [
-    { href: "/dashboard", label: "Matchs", icon: Home },
-    { href: "/dashboard/carnet", label: "Carnet", icon: NotebookPen },
-    { href: "/dashboard/historique", label: "Précision", icon: LineChart },
-    { href: "/dashboard/abonnement", label: "Abonnement", icon: CreditCard },
-    { href: "/dashboard/compte", label: "Compte", icon: User },
+/**
+ * Calcule côté serveur les horodatages des points de nouveauté, puis délègue l'affichage et
+ * l'animation de l'onglet actif au composant client BottomNavBar.
+ */
+export async function BottomNav() {
+  const { userId } = await getCurrentUserState();
+  const { latestPredictionAt, latestPaymentAt } = await getNavNotificationState(userId);
+
+  // Les liens « Matchs » (nouveaux pronostics) et « Compte » (paiement mis à jour) ont un point.
+  const items: BottomNavItem[] = [
+    { href: "/dashboard", label: "Matchs", iconKey: "home", dot: { key: "matchs", latestAt: latestPredictionAt } },
+    { href: "/dashboard/carnet", label: "Carnet", iconKey: "notebook" },
+    { href: "/dashboard/historique", label: "Précision", iconKey: "chart" },
+    { href: "/dashboard/abonnement", label: "Abonnement", iconKey: "card" },
+    { href: "/dashboard/compte", label: "Compte", iconKey: "user", dot: { key: "compte", latestAt: latestPaymentAt } },
   ];
-  return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-white/[0.08] bg-ink-950/90 backdrop-blur-xl">
-      <div className="grid grid-cols-5">
-        {items.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-col items-center gap-1 py-2.5 text-white/50 hover:text-white text-[11px] transition-colors"
-            )}
-          >
-            <Icon className="w-5 h-5" />
-            {label}
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
+
+  return <BottomNavBar items={items} />;
 }

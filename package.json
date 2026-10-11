@@ -23,6 +23,7 @@
     "clsx": "2.1.1",
     "tailwind-merge": "2.4.0",
     "lucide-react": "0.408.0",
+    "motion": "^11.18.2",
     "date-fns": "3.6.0",
     "zod": "3.23.8"
   },

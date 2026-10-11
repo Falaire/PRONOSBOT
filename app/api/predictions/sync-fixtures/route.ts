@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { assertAdminOrCron } from "@/lib/api-auth";
+import { selectFixturesToSync } from "@/lib/fixture-selection";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -35,12 +36,20 @@ const PRIORITY_LEAGUES: Record<string, number> = {
 const EXCLUDED_LEAGUE_PATTERN = /\b(u1[5-9]|u2[0-3]|youth|reserve|réserve)\b/i;
 
 /**
- * Nombre maximum de matchs conservés par exécution (triés par coup d'envoi le plus proche),
- * pour garder la synchronisation et l'affichage raisonnables même les jours chargés (plusieurs
- * milliers de matchs dans le monde un même week-end). Augmente API_FOOTBALL_MAX_FIXTURES si tu
- * veux littéralement tout garder et que ton plan API-Football / ta base le permettent.
+ * Nombre maximum de matchs NON terminés conservés par exécution (les plus proches de maintenant
+ * d'abord), pour garder la synchronisation et l'affichage raisonnables même les jours chargés
+ * (plusieurs milliers de matchs dans le monde un même week-end). Augmente
+ * API_FOOTBALL_MAX_FIXTURES si tu veux garder davantage de matchs à venir.
  */
 const MAX_FIXTURES = Number(process.env.API_FOOTBALL_MAX_FIXTURES ?? 500);
+
+/**
+ * Nombre maximum de matchs TERMINÉS conservés par exécution (les plus récents d'abord), pour
+ * alimenter update-ratings. Quota distinct de MAX_FIXTURES : les matchs à venir ne peuvent plus
+ * évincer les résultats, et inversement. Par défaut 1000, soit la limite de traitement d'un
+ * passage de update-ratings.
+ */
+const MAX_FINISHED_FIXTURES = Number(process.env.API_FOOTBALL_MAX_FINISHED ?? 1000);
 
 /**
  * Nombre maximum de matchs enrichis en détail (1 appel /odds + 1 appel /fixtures/headtohead +
@@ -111,12 +120,15 @@ async function handler(req: NextRequest) {
     }
   }
 
-  // 2. Filtre le bruit académie/réserve, trie par coup d'envoi le plus proche (les matchs d'hier
-  //    déjà terminés remontent naturellement en tête grâce à ce tri), plafonne à MAX_FIXTURES.
-  const filtered: RawFixture[] = allRaw
-    .filter((item) => !EXCLUDED_LEAGUE_PATTERN.test(item.league?.name ?? ""))
-    .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime())
-    .slice(0, MAX_FIXTURES);
+  // 2. Filtre le bruit académie/réserve, puis sélectionne avec deux quotas indépendants :
+  //    matchs non terminés les plus proches (MAX_FIXTURES) et matchs terminés les plus récents
+  //    (MAX_FINISHED_FIXTURES). Voir lib/fixture-selection.ts pour le bug corrigé ici.
+  const candidates = allRaw.filter((item) => !EXCLUDED_LEAGUE_PATTERN.test(item.league?.name ?? ""));
+  const selection = selectFixturesToSync(candidates, Date.now(), {
+    maxOpen: MAX_FIXTURES,
+    maxFinished: MAX_FINISHED_FIXTURES,
+  });
+  const filtered: RawFixture[] = selection.selected;
 
   let fixturesUpserted = 0;
   const fixtureIdByExternal = new Map<string, string>();
@@ -208,6 +220,7 @@ async function handler(req: NextRequest) {
   const toEnrich = filtered
     .filter((item) => new Date(item.fixture.date).getTime() >= now)
     .filter((item) => fixtureIdByExternal.has(String(item.fixture.id)))
+    .sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime())
     .slice(0, MAX_ENRICHED_FIXTURES);
 
   let oddsUpserted = 0;
@@ -337,6 +350,12 @@ async function handler(req: NextRequest) {
     ok: true,
     fixturesFoundAllLeagues: allRaw.length,
     fixturesConsidered: filtered.length,
+    selection: {
+      openAvailable: selection.openAvailable,
+      openKept: selection.openKept,
+      finishedAvailable: selection.finishedAvailable,
+      finishedKept: selection.finishedKept,
+    },
     fixturesUpserted,
     enrichedFixtures: toEnrich.length,
     oddsUpserted,

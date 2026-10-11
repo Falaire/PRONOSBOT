@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserState } from "@/lib/subscription";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 
 /**
  * Garde-fou : un utilisateur connecté sans numéro de téléphone enregistré est renvoyé vers
@@ -11,5 +12,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (userId && needsPhone) {
     redirect("/completer-profil");
   }
-  return <>{children}</>;
+  return <MotionProvider>{children}</MotionProvider>;
 }

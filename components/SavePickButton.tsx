@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Bookmark, BookmarkCheck, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +65,8 @@ export function SavePickButton({
       window.location.href = "/inscription";
       return;
     }
+    // Import dynamique : Supabase n'est chargé qu'au clic (perf, voir SignOutButton).
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     setLoading(true);
     setError(null);
@@ -106,6 +107,8 @@ export function SavePickButton({
       window.location.href = "/inscription";
       return;
     }
+    // Import dynamique : Supabase n'est chargé qu'au clic (perf, voir SignOutButton).
+    const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     setLoading(true);
     setError(null);
