@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { assertAdminOrCron } from "@/lib/api-auth";
 import { applyMatchResult, type RatingUpdateInput } from "@/lib/prediction/ratings";
 import { HOME_ADVANTAGE } from "@/lib/prediction/types";
+import { sanitizeLeagueAvg } from "@/lib/prediction/league-average";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -79,7 +80,7 @@ async function handler(req: NextRequest) {
       const awayRatings = ratingsByTeam.get(fxAway.id)!;
 
       const updated = applyMatchResult(homeRatings, awayRatings, fx.home_score, fx.away_score, {
-        leagueAvgGoals: Number(league?.avg_goals_per_match ?? 2.5),
+        leagueAvgGoals: sanitizeLeagueAvg(league?.avg_goals_per_match),
         homeAdvantage: HOME_ADVANTAGE,
       });
 
