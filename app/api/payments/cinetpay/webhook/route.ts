@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Transaction inconnue" }, { status: 404 });
   }
 
+  // IDEMPOTENCE. La route est publiquement joignable par conception (notify_url server-to-server,
+  // sans session) : elle doit donc etre rejouable SANS EFFET. Sans ce garde, n'importe quel abonne
+  // qui rejoue son propre transaction_id (il lui a ete renvoye par /init) recoit un abonnement de
+  // plus a chaque appel, et getCurrentUserState() lit le ends_at le plus recent -> Premium a vie
+  // pour un mois paye. Le retry de CinetPay produirait le meme effet sans intervention d'un tiers.
+  if (payment.status === "success") {
+    return NextResponse.json({ ok: true, status: "ALREADY_CREDITED", subscriptionId: payment.subscription_id });
+  }
+
   // Étape de vérification côté serveur — jamais de confiance aveugle dans le payload reçu
   const verification = await verifyTransaction(transactionId);
 
@@ -57,9 +66,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Plan introuvable dans le paiement" }, { status: 400 });
   }
 
+  // Controle du montant cote serveur. /init fixe deja le prix depuis PLAN_PRICES_FCFA (jamais depuis
+  // le client), donc ce n'est pas une faille ouverte aujourd'hui : c'est ce qui empechera le prochain
+  // operateur de paiement, ou un paiement cree a la main dans le dashboard CinetPay, de le devenir.
+  if (verification.amount !== undefined && Number(verification.amount) !== plan.amount) {
+    await admin
+      .from("payments")
+      .update({ status: "failed", raw_payload: verification.raw })
+      .eq("id", payment.id);
+    return NextResponse.json(
+      { error: `Montant verifie (${verification.amount}) different du prix du plan (${plan.amount})` },
+      { status: 409 }
+    );
+  }
+
   const paymentMethod = mapPaymentMethod(verification.paymentMethod);
   const startedAt = new Date();
-  const endsAt = new Date(startedAt.getTime() + plan.days * 24 * 3600 * 1000);
+
+  // CUMUL, pas remplacement : un abonne qui renouvelle a J+25 d'un mois de 30 jours ne doit pas
+  // perdre 25 jours payes. On repart de la fin de l'abonnement encore actif s'il y en a un
+  // (logique identique a app/api/payments/manual/approve/route.ts l.43-51).
+  const { data: courant } = await admin
+    .from("subscriptions")
+    .select("ends_at")
+    .eq("user_id", payment.user_id)
+    .in("status", ["trial", "active"])
+    .gte("ends_at", new Date().toISOString())
+    .order("ends_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const startBase = courant?.ends_at ? new Date(courant.ends_at) : startedAt;
+  const endsAt = new Date(startBase.getTime() + plan.days * 24 * 3600 * 1000);
 
   // Crée l'abonnement (idempotent grâce à provider_transaction_id unique sur payments)
   const { data: subscription, error: subError } = await admin
@@ -71,6 +108,7 @@ export async function POST(req: NextRequest) {
       started_at: startedAt.toISOString(),
       ends_at: endsAt.toISOString(),
       amount_fcfa: plan.amount,
+      payment_id: payment.id, // <- contrainte d'unicite en base: see migration 0006
     })
     .select()
     .single();

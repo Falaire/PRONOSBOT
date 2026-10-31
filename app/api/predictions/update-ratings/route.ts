@@ -101,7 +101,11 @@ async function handler(req: NextRequest) {
       attack_rating: round3(r.attack),
       defense_rating: round3(r.defense),
       elo: round2(r.elo),
-      form_points_5: Math.round(r.formPoints5),
+      // 2 decimales et non un entier : avec Math.round(), la recursion old*0.8 + points a des points
+      // fixes 13 / 7 / 2 au lieu des asymptotes 15 / 5 / 0 promises dans ratings.ts l.52-55 — une
+      // equipe qui fait nuls sur nuls reste figee a 7 pour toujours. Exige teams.form_points_5
+      // numeric(5,2) (migration 0006).
+      form_points_5: Math.round(r.formPoints5 * 100) / 100,
       updated_at: new Date().toISOString(),
     }));
     const { error: teamsError } = await supabase.from("teams").upsert(teamsPayload, { onConflict: "id" });

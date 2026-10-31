@@ -1,17 +1,29 @@
 /** Données de seed — ligues prioritaires + équipes de départ (Togo, Afrique, Top 5 Europe) */
 
+/**
+ * UNITE DE avg_goals_per_match : buts par EQUIPE et par match (moyenne de ligue), PAS le total
+ * des deux équipes. Le moteur applique HOME_ADVANTAGE en plus (lib/prediction/engine.ts), donc un
+ * total inscrit ici double mecaniquement le nombre de buts attendus : avec 2.50, un match entre deux
+ * equipes moyennes sortait a 5.53 buts attends et un « +2,5 buts » a 91 % (frequence reelle : 52 %).
+ * sanitizeLeagueAvg rejette toute valeur hors [0.8 ; 2.0] et retombe sur 1.35 : une valeur au
+ * format "total" etait donc silencieusement remplacee par un repli unique pour TOUTES les ligues
+ * (11/11 dans ce fichier), ce qui effacait la difference Bundesliga / Ligue 1 togolaise.
+ * Valeurs ci-dessous = totaux observes / 2. A remplacer des que possible par le résultat de
+ * /api/predictions/recalc-league-averages (qui mesure, lui, sur les matchs rejoues).
+ */
+
 export const SEED_LEAGUES = [
-  { code: "TG1", name: "Ligue 1 Togo", country: "Togo", priority_order: 1, avg_goals_per_match: 2.3 },
-  { code: "CAF_CL", name: "Ligue des Champions CAF", country: "Afrique", priority_order: 2, avg_goals_per_match: 2.2 },
-  { code: "CAN", name: "Coupe d'Afrique des Nations", country: "Afrique", priority_order: 3, avg_goals_per_match: 2.4 },
-  { code: "CIV1", name: "Ligue 1 Côte d'Ivoire", country: "Côte d'Ivoire", priority_order: 4, avg_goals_per_match: 2.3 },
-  { code: "SEN1", name: "Ligue 1 Sénégal", country: "Sénégal", priority_order: 5, avg_goals_per_match: 2.2 },
-  { code: "UCL", name: "Ligue des Champions UEFA", country: "Europe", priority_order: 10, avg_goals_per_match: 2.8 },
-  { code: "EPL", name: "Premier League", country: "Angleterre", priority_order: 11, avg_goals_per_match: 2.85 },
-  { code: "LIGA", name: "LaLiga", country: "Espagne", priority_order: 12, avg_goals_per_match: 2.6 },
-  { code: "SERIEA", name: "Serie A", country: "Italie", priority_order: 13, avg_goals_per_match: 2.7 },
-  { code: "BUNDES", name: "Bundesliga", country: "Allemagne", priority_order: 14, avg_goals_per_match: 3.1 },
-  { code: "LIGUE1", name: "Ligue 1", country: "France", priority_order: 15, avg_goals_per_match: 2.6 },
+  { code: "TG1", name: "Ligue 1 Togo", country: "Togo", priority_order: 1, avg_goals_per_match: 1.15 },
+  { code: "CAF_CL", name: "Ligue des Champions CAF", country: "Afrique", priority_order: 2, avg_goals_per_match: 1.1 },
+  { code: "CAN", name: "Coupe d'Afrique des Nations", country: "Afrique", priority_order: 3, avg_goals_per_match: 1.2 },
+  { code: "CIV1", name: "Ligue 1 Côte d'Ivoire", country: "Côte d'Ivoire", priority_order: 4, avg_goals_per_match: 1.15 },
+  { code: "SEN1", name: "Ligue 1 Sénégal", country: "Sénégal", priority_order: 5, avg_goals_per_match: 1.1 },
+  { code: "UCL", name: "Ligue des Champions UEFA", country: "Europe", priority_order: 10, avg_goals_per_match: 1.4 },
+  { code: "EPL", name: "Premier League", country: "Angleterre", priority_order: 11, avg_goals_per_match: 1.43 },
+  { code: "LIGA", name: "LaLiga", country: "Espagne", priority_order: 12, avg_goals_per_match: 1.3 },
+  { code: "SERIEA", name: "Serie A", country: "Italie", priority_order: 13, avg_goals_per_match: 1.35 },
+  { code: "BUNDES", name: "Bundesliga", country: "Allemagne", priority_order: 14, avg_goals_per_match: 1.55 },
+  { code: "LIGUE1", name: "Ligue 1", country: "France", priority_order: 15, avg_goals_per_match: 1.3 },
 ];
 
 export const SEED_TEAMS = [

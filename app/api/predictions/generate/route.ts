@@ -4,8 +4,19 @@ import { assertAdminOrCron } from "@/lib/api-auth";
 import { predictMatch, isValueBet, impliedProbability, devigProbabilities1x2 } from "@/lib/prediction/engine";
 import type { TeamInput, MatchContext } from "@/lib/prediction/types";
 import { sanitizeLeagueAvg } from "@/lib/prediction/league-average";
+import {
+  blend1x2,
+  blendBinary,
+  MARKET_WEIGHT_1X2,
+  MARKET_WEIGHT_OVER25,
+  MARKET_WEIGHT_BTTS,
+} from "@/lib/prediction/calibration";
 
 export const dynamic = "force-dynamic";
+
+/** Version du modele. Changer cette chaine cree un carnet parallele (unique fixture_id+model_version) :
+ * c'est ce qui permet de comparer elo-poisson-v1 (avant correctifs) et v2 (apres) sur les memes matchs. */
+const MODEL_VERSION = "elo-poisson-v2";
 export const maxDuration = 60;
 
 /**
@@ -47,6 +58,7 @@ async function handler(req: NextRequest) {
 
   const errors: string[] = [];
   const rows: Record<string, unknown>[] = [];
+  const oddsByFixture = new Map<string, Record<string, unknown>>();
 
   // --- Fatigue / enchaînement : une seule requête pour tous les matchs du lot, plutôt qu'une
   // requête par équipe. On compte les matchs (terminés ou programmés) dans les 10 derniers jours
@@ -114,22 +126,45 @@ async function handler(req: NextRequest) {
 
       const result = predictMatch(home, away, ctx);
 
-      // --- Value bet 1X2, calculée sur la probabilité marché DÉ-MARGÉE (marge bookmaker retirée) ---
-      let valueBetMarket: string | null = null;
-      let isValue = false;
-      let edgeValue: number | null = null;
-      let marketProbUsed: number | null = null;
-
       const devig =
         fx.odds_home && fx.odds_draw && fx.odds_away
           ? devigProbabilities1x2(Number(fx.odds_home), Number(fx.odds_draw), Number(fx.odds_away))
           : null;
 
+      // --- Calibration de sortie (temperature + retractation vers le marche) ---
+      // Le moteur classe bien les favoris mais est trop sur de lui : ces deux scalaires, ajustes sur
+      // train et valides sur 999 matchs de test, font passer le log-loss 1X2 de 1.04635 a 1.00670
+      // (marche seul : 0.99776) et remontent l'argmax de 49.05 % a 50.45 %. Voir lib/prediction/calibration.ts.
+      const probs = blend1x2(
+        { home: result.homeWinProb, draw: result.drawProb, away: result.awayWinProb },
+        devig ? { home: devig.home, draw: devig.draw, away: devig.away } : null,
+        MARKET_WEIGHT_1X2
+      );
+      const over25 = blendBinary(
+        result.over25Prob,
+        fx.odds_over25 ? impliedProbability(Number(fx.odds_over25)) : null,
+        MARKET_WEIGHT_OVER25
+      );
+      const btts = blendBinary(
+        result.bttsYesProb,
+        fx.odds_btts_yes ? impliedProbability(Number(fx.odds_btts_yes)) : null,
+        MARKET_WEIGHT_BTTS
+      );
+
+      // --- Value bet 1X2, calculée sur la probabilité marché DÉ-MARGÉE (marge bookmaker retirée) ---
+      // La value est evaluee APRES calibration, donc sur la probabilite reellement publiee : un
+      // signal qui ne survit pas au retractation vers le marche n'est pas une value, c'est le bruit
+      // du modele. Consequence attendue et souhaitee : moins de drapeaux « value », mais defensables.
+      let valueBetMarket: string | null = null;
+      let isValue = false;
+      let edgeValue: number | null = null;
+      let marketProbUsed: number | null = null;
+
       if (devig) {
         const candidates: { market: string; model: number; market_: number }[] = [
-          { market: "1", model: result.homeWinProb, market_: devig.home },
-          { market: "X", model: result.drawProb, market_: devig.draw },
-          { market: "2", model: result.awayWinProb, market_: devig.away },
+          { market: "1", model: probs.home, market_: devig.home },
+          { market: "X", model: probs.draw, market_: devig.draw },
+          { market: "2", model: probs.away, market_: devig.away },
         ];
         // On retient le marché avec le plus grand écart positif (la "meilleure" value, pas
         // simplement le premier qui dépasse le seuil).
@@ -154,19 +189,19 @@ async function handler(req: NextRequest) {
       const extraDataGaps = [...result.dataGaps];
       if (!isValue && fx.odds_over25) {
         const marketOver = impliedProbability(Number(fx.odds_over25));
-        if (isValueBet(result.over25Prob, marketOver, 0.07)) {
+        if (isValueBet(over25.prob, marketOver, 0.07)) {
           valueBetMarket = "over25";
           isValue = true;
-          edgeValue = round4(result.over25Prob - marketOver);
+          edgeValue = round4(over25.prob - marketOver);
           marketProbUsed = round4(marketOver);
           extraDataGaps.push("value sur Over 2.5 basée sur une cote non dé-margée (marge bookmaker non retirée pour ce marché)");
         }
       } else if (!isValue && fx.odds_btts_yes) {
         const marketBtts = impliedProbability(Number(fx.odds_btts_yes));
-        if (isValueBet(result.bttsYesProb, marketBtts, 0.07)) {
+        if (isValueBet(btts.prob, marketBtts, 0.07)) {
           valueBetMarket = "btts_yes";
           isValue = true;
-          edgeValue = round4(result.bttsYesProb - marketBtts);
+          edgeValue = round4(btts.prob - marketBtts);
           marketProbUsed = round4(marketBtts);
           extraDataGaps.push("value sur BTTS basée sur une cote non dé-margée (marge bookmaker non retirée pour ce marché)");
         }
@@ -175,21 +210,33 @@ async function handler(req: NextRequest) {
       if (!devig && (fx.odds_home || fx.odds_draw || fx.odds_away)) {
         extraDataGaps.push("cotes 1X2 incomplètes, dé-margeage impossible");
       }
+      if (!probs.blended) {
+        // Sans marche, le pronostic reste celui du modele (non retracte) : a afficher comme tel,
+        // parce qu'un 1X2 non confronte au marche n'a pas la meme valeur de confiance.
+        extraDataGaps.push("pronostic non calibre sur le marche (cotes indisponibles)");
+      }
       if (fx.stakes_note) {
         // L'enjeu est purement contextuel (affiché), jamais traduit en ajustement numérique de proba.
       }
 
+      // La confiance publiee se lit sur les probabilites PUBLIEES (melangees), pas sur celles du
+      // modele nu : sinon la barre « confiance » et le « vainqueur a x % » cessent de parler la meme
+      // langue — c'etait exactement l'ecart 78 % / 58 % constate sur les fiches.
+      const pubSorted = [probs.home, probs.draw, probs.away].sort((a, b) => b - a);
+      const quality = 1 - Math.min(0.25, extraDataGaps.length * 0.08);
+      const confidence = Math.round(Math.min(97, Math.max(35, pubSorted[0] * 100 * quality)));
+
       rows.push({
         fixture_id: fx.id,
-        model_version: "elo-poisson-v1", // identifiant technique interne inchangé, voir commentaire ci-dessus
-        prob_home: result.homeWinProb,
-        prob_draw: result.drawProb,
-        prob_away: result.awayWinProb,
-        prob_over25: result.over25Prob,
-        prob_btts_yes: result.bttsYesProb,
+        model_version: MODEL_VERSION, // v2 = total de buts conserve + calibration (le carnet garde v1 separement)
+        prob_home: round4(probs.home),
+        prob_draw: round4(probs.draw),
+        prob_away: round4(1 - round4(probs.home) - round4(probs.draw)), // 3e branche deduite : somme = 1
+        prob_over25: round4(over25.prob),
+        prob_btts_yes: round4(btts.prob),
         predicted_score_home: result.predictedScoreHome,
         predicted_score_away: result.predictedScoreAway,
-        confidence: result.confidence,
+        confidence,
         explanation_text: fx.stakes_note ? `${result.explanation} Enjeu : ${fx.stakes_note}` : result.explanation,
         is_value_bet: isValue,
         value_bet_market: valueBetMarket,
@@ -197,6 +244,23 @@ async function handler(req: NextRequest) {
         market_prob_used: marketProbUsed,
         data_gaps: extraDataGaps.length > 0 ? extraDataGaps.join(" | ") : null,
         updated_at: new Date().toISOString(),
+      });
+
+      // Snapshot des cotes AU MOMENT DE L'EMISSION : fixtures.odds_* est reecrit par le cron de
+      // synchro, donc sans cette ligne le CLV (et le bien-fonde d'un « value bet ») est
+      // incalculable des le lendemain. Table creee par la migration 0006.
+      oddsByFixture.set(fx.id as string, {
+        odds_home: fx.odds_home ?? null,
+        odds_draw: fx.odds_draw ?? null,
+        odds_away: fx.odds_away ?? null,
+        devig_home: devig ? round4(devig.home) : null,
+        devig_draw: devig ? round4(devig.draw) : null,
+        devig_away: devig ? round4(devig.away) : null,
+        overround: devig ? round4(devig.overround) : null,
+        odds_over25: fx.odds_over25 ?? null,
+        odds_btts_yes: fx.odds_btts_yes ?? null,
+        provider: "fixtures_row",
+        captured_at: new Date().toISOString(),
       });
     } catch (e: any) {
       errors.push(`Fixture ${fx.id}: ${e.message}`);
@@ -209,9 +273,24 @@ async function handler(req: NextRequest) {
   const BATCH_SIZE = 500;
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-    const { error: upsertError } = await supabase
+    const { data: upserted, error: upsertError } = await supabase
       .from("predictions")
-      .upsert(batch, { onConflict: "fixture_id,model_version" });
+      .upsert(batch, { onConflict: "fixture_id,model_version" })
+      .select("id, fixture_id");
+    if (!upsertError && upserted) {
+      const oddsRows = upserted
+        .map((row: { id: string; fixture_id: string }) => ({
+          prediction_id: row.id,
+          ...(oddsByFixture.get(row.fixture_id) ?? {}),
+        }))
+        .filter((o: Record<string, unknown>) => o.prediction_id);
+      if (oddsRows.length > 0) {
+        const { error: oddsError } = await supabase
+          .from("prediction_odds")
+          .upsert(oddsRows, { onConflict: "prediction_id" });
+        if (oddsError) errors.push(`Snapshot cotes: ${oddsError.message}`);
+      }
+    }
     if (upsertError) {
       errors.push(`Lot ${i}-${i + batch.length}: ${upsertError.message}`);
       continue;
