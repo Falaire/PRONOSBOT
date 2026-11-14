@@ -40,11 +40,11 @@ fictives dans `lib/demo-data.ts`) pour visualiser tout le produit immédiatement
      ou les cotes Over/Under n'apparaissent pas), c'est très probablement parce que ces deux
      migrations n'ont pas encore été exécutées sur ton projet — vas dans Supabase → SQL Editor et
      lance-les maintenant, rien à craindre, elles sont idempotentes (`if not exists` partout).
-3. Renseigne `.env.local` (Supabase, CinetPay, API-Football, Telegram — voir `.env.example`)
+3. Renseigne `.env.local` (Supabase, CinetPay, Telegram — voir `.env.example`). Aucune clé pour les matchs : la source est openfootball.
 4. `node --env-file=.env.local scripts/seed.mjs` → importe les ligues + équipes de départ
 5. Déploie sur [Vercel](https://vercel.com) (Hobby gratuit) — `vercel.json` configure déjà les
    4 tâches planifiées (crons, fuseau UTC = heure de Lomé) :
-   - `06h00` — synchronisation des matchs du jour (API-Football)
+   - `06h00` — synchronisation des matchs (openfootball, sans clé)
    - `06h15` — mise à jour des ratings des équipes (résultats de la veille)
    - `06h30` — génération des pronostics (moteur Dixon-Coles)
    - `08h00` — envoi des alertes Telegram
@@ -100,7 +100,7 @@ app/
   api/
     payments/cinetpay/init       initialise une transaction Mobile Money
     payments/cinetpay/webhook    confirme le paiement -> active l'abonnement
-    predictions/sync-fixtures    cron: récupère les matchs du jour (API-Football)
+    predictions/sync-fixtures    cron: récupère les matchs et résultats (openfootball)
     predictions/generate         cron: calcule les pronostics (Elo + Poisson)
     notify/telegram              cron: envoie les pronostics du jour sur Telegram
   legal/cgu, confidentialite     mentions légales (jeu d'argent vs information)
