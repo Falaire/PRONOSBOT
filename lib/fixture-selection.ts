@@ -1,5 +1,5 @@
 /**
- * Sélection des matchs à retenir lors de la synchronisation API-Football (sync-fixtures).
+ * Sélection des matchs à retenir lors de la synchronisation des matchs (sync-fixtures).
  *
  * Bug corrigé : auparavant, les matchs étaient triés par date croissante puis coupés à
  * MAX_FIXTURES. Avec ~2 000 matchs sur hier/aujourd'hui/demain, on gardait donc les 500 PLUS
